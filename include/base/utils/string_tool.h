@@ -54,4 +54,55 @@ inline std::vector<std::string> split_string( std::string const& str, char sep =
     return val;
 }
 
+inline bool is_wildcard( std::string const& str )
+{
+    return str.find( "?" ) != std::string::npos || str.find( "*" ) != std::string::npos;
+}
+
+inline bool wildcard_match( std::string const& pattern, std::string const& compare_str )
+{
+    char* pat = ( char* )pattern.c_str();
+    char* str = ( char* )compare_str.c_str();
+    char* s = NULL;
+    char* p = NULL;
+    bool star = false;
+    bool is_break = false;
+    do
+    {
+        is_break = false;
+        for( s = str, p = pat; *s; ++s, ++p )
+        {
+            switch( *p )
+            {
+            case '?':
+                break;
+            case '*':
+                star = true;
+                str = s;
+                pat = p;
+                if( !*++pat ) return true;
+                is_break = true;
+                break;
+            default:
+                if( *s != *p )
+                {
+                    if( !star ) return false;
+                    str++;
+                    is_break = true;
+                }
+                break;
+            }
+
+            if( is_break )
+                break;
+        }
+
+        if( !is_break )
+        {
+            if( *p == '*' ) ++p;
+            return ( !*p );
+        }
+    } while( true );
+}
+
 NAMESPACE_TARO_END
