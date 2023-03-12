@@ -14,6 +14,7 @@
 #define TARO_ERR_STATE       -8    // 状态错误 
 #define TARO_ERR_FILE_OP     -9    // 文件操作错误
 #define TARO_ERR_CONTINUE    -10   // 继续等待
+#define TARO_ERR_FORMAT      -11   // 格式错误
 
 NAMESPACE_TARO_BEGIN
 

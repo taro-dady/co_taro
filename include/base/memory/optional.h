@@ -120,6 +120,14 @@ PUBLIC: // 公共函数
         return value_ != nullptr;
     }
 
+    /**
+    * @brief 获取对象指针
+    */
+    T* pointer()
+    {
+        return value_.get();
+    }
+
 PRIVATE: // 私有变量
 
     std::unique_ptr<T> value_;

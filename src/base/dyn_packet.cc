@@ -186,9 +186,7 @@ PUBLIC: // 公共函数
         {
             return false;
         }
-
-        size_   -= ( ( uint32_t )offset - offset_ );
-        offset_  = ( uint32_t )offset;
+        offset_ = ( uint32_t )offset;
         return true;
     }
 
