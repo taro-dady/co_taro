@@ -79,7 +79,6 @@ int32_t PacketList::try_read( uint8_t* buf, uint32_t size, uint32_t offset )
             read_bytes += to_read_bytes;
             return read_bytes;
         }
-
         memcpy( buf + read_bytes, ( char* )( *it )->buffer() + temp, no_read_bytes );
         read_bytes += no_read_bytes;
         temp = 0;
