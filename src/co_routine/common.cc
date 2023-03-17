@@ -80,14 +80,16 @@ void sched_co( CoRoutineSPtr co )
 void init_async_log()
 {
     auto chn  = std::make_shared< Channel<LogItemSPtr> >( 128 );
-    auto func = [chn]( SinkSPtr sink, std::shared_ptr<std::string> msg, ELogLevel lvl )
+    auto schd = get_scheduler(); // 获取初始化线程即主线程的调度器
+    auto func = [chn, schd]( SinkSPtr sink, std::shared_ptr<std::string> msg, ELogLevel lvl )
     {
         TARO_ASSERT( sink && msg );
 
         bool expr = false;
         if ( co_async_running.compare_exchange_strong( expr, true ) )
         {
-            co_run [chn]()
+            // 异步日志协程主线程进行写日志操作
+            auto func = [chn]()
             {
                 while( 1 )
                 {
@@ -97,7 +99,8 @@ void init_async_log()
                         continue;
                     item->sink->write( item->msg->c_str(), item->lvl );
                 }
-            }, opt_name( "async_logger" );
+            };
+            schd->push( CoRoutine::create( "async_logger", func, false ) );
         }
         
         auto item  = std::make_shared<LogItem>();

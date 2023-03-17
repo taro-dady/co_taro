@@ -4,6 +4,7 @@
 #include "base/base.h"
 #include "base/system/spin_locker.h"
 #include <map>
+#include <mutex>
 
 NAMESPACE_TARO_BEGIN
 
@@ -20,7 +21,7 @@ PUBLIC:
      */
     bool insert( Key const& key, Value const& value )
     {
-        WriteGuard g( locker_ );
+        std::unique_lock<SpinLocker> g( locker_ );
         return container_.insert( std::make_pair( key, value ) ).second;
     }
 
@@ -31,7 +32,7 @@ PUBLIC:
      */
     bool erase( Key const& key )
     {
-        WriteGuard g( locker_ );
+        std::unique_lock<SpinLocker> g( locker_ );
         auto it = container_.find( key );
         if ( it != container_.end() )
         {
@@ -48,7 +49,7 @@ PUBLIC:
      */
     Value find( Key const& key )
     {
-        ReadGuard g( locker_ );
+        std::unique_lock<SpinLocker> g( locker_ );
         auto it = container_.find( key );
         if ( it == container_.end() )
         {
@@ -65,7 +66,7 @@ PUBLIC:
      */
     bool find( Key const& key, Value& value )
     {
-        ReadGuard g( locker_ );
+        std::unique_lock<SpinLocker> g( locker_ );
         auto it = container_.find( key );
         if ( it == container_.end() )
         {
@@ -80,7 +81,7 @@ PUBLIC:
      */
     std::map<Key, Value> copy()
     {
-        ReadGuard g( locker_ );
+        std::unique_lock<SpinLocker> g( locker_ );
         return container_;
     }
 
