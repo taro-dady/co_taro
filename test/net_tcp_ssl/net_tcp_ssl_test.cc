@@ -30,6 +30,10 @@ void client_handle( net::TcpClientSPtr const& client )
                 break; 
             }
         }
+        else if ( ret == TARO_ERR_CONTINUE )
+        {
+            continue;
+        }
         else if( ret == TARO_ERR_TIMEOUT )
         {
             NET_WARN << "wait timeout";
