@@ -141,6 +141,18 @@ void udp_conn_loop_send()
     rt::co_loop();
 }
 
+void async_udp_dns_parser()
+{
+    co_run[=]()
+    {
+        auto items = get_host_by_name( "www.baidu.com" );
+        for( auto& one : items ){
+            std::cout << one.domain << " " << one.ip << std::endl;
+        }
+    };
+    rt::co_loop_until_no_tasks();
+}
+
 int main( int argc, char** argv )
 {
     if ( argc < 2 )
@@ -165,6 +177,9 @@ int main( int argc, char** argv )
         break;
     case 3:
         udp_conn_loop_send();
+        break;
+    case 4:
+        async_udp_dns_parser();
         break;
     }
     net::stop_network();
