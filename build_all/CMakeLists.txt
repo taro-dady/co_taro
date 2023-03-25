@@ -13,12 +13,13 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	file(GLOB SRC_CPP 
 	    ../src/base/*.cc ../src/base/windows/*.cc 
 		../src/log/*.cc 
+		../src/data_base/*.cc 
 		../src/co_routine/*.cc ../src/co_routine/windows/* 
 	    ../src/net/*cc ../src/net/open_ssl/*cc ../src/net/windows/*.cc)
 	ADD_DEFINITIONS(-D_WINSOCK_DEPRECATED_NO_WARNINGS -DWIN32_LEAN_AND_MEAN)
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	file(GLOB SRC_CPP ../src/base/*.cc ../src/base/linux/* 
-	    ../src/co_routine/*.cc ../src/co_routine/linux/* 
+	    ../src/co_routine/*.cc ../src/co_routine/linux/* ../src/data_base/*.cc 
 		../src/log/*cc ../src/net/*cc ../src/net/open_ssl/*.cc ../src/net/linux/*.cc ../src/log/*.cc ../src/co_routine/*.cc ../src/co_routine/linux/*)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 

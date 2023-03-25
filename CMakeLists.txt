@@ -39,6 +39,7 @@ ADD_SUBDIRECTORY(test/co_routine)
 ADD_SUBDIRECTORY(test/net_tcp)
 ADD_SUBDIRECTORY(test/net_tcp_ssl)
 ADD_SUBDIRECTORY(test/net_udp)
+ADD_SUBDIRECTORY(test/data_base)
 
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	ADD_SUBDIRECTORY(test/net_unix_domain)
