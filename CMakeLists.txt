@@ -28,6 +28,9 @@ SET(YAML_CPP_BUILD_TESTS "off")
 SET(YAML_CPP_BUILD_TOOLS "off")
 ADD_SUBDIRECTORY(3th/yaml-cpp)
 
+# compile sqlite
+ADD_SUBDIRECTORY(3th/sqlite)
+
 # compile all code
 ADD_SUBDIRECTORY(build_all)
 

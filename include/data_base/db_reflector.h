@@ -135,7 +135,7 @@ PRIVATE: // 私有变量
 struct TARO_DLL_EXPORT DBReflector
 {
 PUBLIC: // 公共函数
-
+    
     /**
     * @brief  获取反射管理单例
     */
