@@ -1,4 +1,4 @@
-
+﻿
 #pragma once
 
 #include "data_base/db_helper.h"
@@ -116,15 +116,26 @@ PUBLIC: // 公共函数
      * @brief 建表
     */
     template<typename T, typename... Args>
-    bool create_table( Args... args )
+    bool create_table( Args&&... args )
     {
         std::string name;
         std::vector<ClsMemberReflectorSPtr> members;
-        get_cls_info( name, members );
+        get_cls_info<T>( name, members );
         TARO_ASSERT( !name.empty() && members.size() );
 
-        std::string cmd;
+        // 解析参数
+        CreateTblConstraint constraint;
+        expand_create_param( constraint, std::forward<Args>( args )... );
 
+        // 构造建表SQL语句
+        auto cmd = create_tbl_sql( name.c_str(), members, constraint );
+        if ( cmd.empty() )
+        {
+            DB_ERROR << "compose create table sql failed";
+            return false;
+        }
+
+        // 执行建表命令
         if ( TARO_OK != excute_cmd( cmd.c_str() ) )
         {
             DB_ERROR << "create failed. sql:" << cmd;
@@ -160,8 +171,9 @@ PRIVATE: // 私有函数
         if( name.empty() )
         {
             T::db_cls_reflect();
+            name = inst.find_class_name( type );
         }
-        name = inst.find_class_name( type );
+        TARO_ASSERT( !name.empty() );
         members = inst.get_member_reflectors( type );
     }
 };
@@ -174,6 +186,6 @@ using DataBaseSPtr = std::shared_ptr<DataBase>;
 /**
 * @brief  创建Database
 */
-extern TARO_DLL_EXPORT DataBaseSPtr create_database( const char* type );
+extern TARO_DLL_EXPORT DataBaseSPtr create_database( const char* type = DB_TYPE_SQLITE );
 
 NAMESPACE_TARO_DB_END

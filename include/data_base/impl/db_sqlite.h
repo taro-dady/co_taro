@@ -1,4 +1,4 @@
-
+﻿
 #pragma once
 
 #include "sqlite/sqlite3.h"
@@ -112,6 +112,14 @@ PRIVATE: // 私有函数
     * @brief  执行事务命令
     */
     int32_t exec_trans( const char* cmd );
+
+    /**
+     * @brief 组装建表的SQL
+    */
+    virtual std::string create_tbl_sql( 
+                        const char* cls_name, 
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        CreateTblConstraint const& constraint ) override;
 
 PRIVATE: // 私有变量
 

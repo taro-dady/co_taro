@@ -1,6 +1,7 @@
-
+﻿
 #include "base/serialize/str_serialize.h"
 #include "data_base/db_reflector.h"
+#include "data_base/data_base.h"
 
 USING_NAMESPACE_TARO
 
@@ -33,6 +34,18 @@ void db_test()
     printf( "%d %s\n", temp.age, temp.name.c_str() );
 }
 
+void db_test1()
+{
+    // 创建数据库对象
+    auto db = db::create_database();
+
+    // 连接数据库(SQLITE打开文件)
+    db->connect( "sqlite_test.db" );
+
+    // 建表，参数为约束条件
+    db->create_table<aa::Employee>( DB_CSTR( aa::Employee::name ).primary_key().not_null(), db::create_if_not_exist() );
+}
+
 int main( int argc, char** argv )
 {
     if ( argc < 2 )
@@ -44,7 +57,7 @@ int main( int argc, char** argv )
     switch ( atoi( argv[1] ) )
     {
     case 0:
-        db_test();
+        db_test1();
         break;
     }
     return 0;

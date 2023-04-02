@@ -1,7 +1,101 @@
-
+﻿
 #include "data_base/impl/db_sqlite.h"
+#include "data_base/impl/db_helper_impl.h"
 
 NAMESPACE_TARO_DB_BEGIN
+
+// 约束条件转换为字符
+static std::string constr_to_str( DBContraintArgBaseSPtr const& base_ptr, uint32_t ignore = 0 )
+{
+    TARO_ASSERT( base_ptr != nullptr );
+
+    // 忽略的类型不处理
+    if( ignore & base_ptr->kind() )
+    {
+        return "";
+    }
+
+    if( eDBConstraintPrimaryKey == base_ptr->kind() )
+    {
+        return "primary key";
+    }
+    else if( eDBConstraintNotNull == base_ptr->kind() )
+    {
+        return "not null";
+    }
+    else if( eDBConstraintUnique == base_ptr->kind() )
+    {
+        return "unique";
+    }
+    else if( eDBConstraintDefault == base_ptr->kind() )
+    {
+        return "default";
+    }
+    else if( eDBConstraintDefaultValue == base_ptr->kind() )
+    {
+        auto val_ptr = std::dynamic_pointer_cast< DBContraintArg >( base_ptr );
+        TARO_ASSERT( val_ptr != nullptr );
+        return "default " + val_ptr->get();
+    }
+    else if( eDBConstraintAutoInc == base_ptr->kind() )
+    {
+        return "autoincrement";
+    }
+    else if( eDBConstraintCheck == base_ptr->kind() )
+    {
+        auto val_ptr = std::dynamic_pointer_cast< DBContraintArg >( base_ptr );
+        TARO_ASSERT( val_ptr != nullptr );
+        return "check(" + val_ptr->get() + ")";
+    }
+
+    TARO_ASSERT( 0 );
+    return "";
+}
+
+static bool is_string_type( const std::type_info* type )
+{
+    return ( *type == typeid( std::string ) || *type == typeid( const char* ) || *type == typeid( char* ) );
+}
+
+static bool type_to_str( const std::type_info* p, std::string& tstr )
+{
+    TARO_ASSERT( p != nullptr );
+
+    if( is_string_type( p ) )
+    {
+        tstr = "varchar";
+    }
+    else if( *p == typeid( int32_t )
+        || *p == typeid( int16_t )
+        || *p == typeid( int8_t )
+        || *p == typeid( uint32_t )
+        || *p == typeid( uint16_t )
+        || *p == typeid( uint8_t ) )
+    {
+        tstr = "integer";
+    }
+    else if( *p == typeid( int64_t ) )
+    {
+        tstr = "bigint";
+    }
+    else if( *p == typeid( uint64_t ) )
+    {
+        tstr = "unsigned big int";
+    }
+    else if( *p == typeid( double ) || *p == typeid( float ) )
+    {
+        tstr = "real";
+    }
+    else if( *p == typeid( bool ) )
+    {
+        tstr = "boolean";
+    }
+    else
+    {
+        return false;
+    }
+    return true;
+}
 
 SQLiteDBResult::SQLiteDBResult( sqlite3_stmt* stmt )
     : stmt_( stmt )
@@ -44,7 +138,7 @@ SQLiteDB::~SQLiteDB()
 
 int32_t SQLiteDB::connect( const char* uri )
 {
-    if ( !STRING_CHECK( uri ) )
+    if( !STRING_CHECK( uri ) )
     {
         DB_ERROR << "uri invalid";
         return TARO_ERR_INVALID_ARG;
@@ -71,7 +165,7 @@ int32_t SQLiteDB::disconnect()
 
 int32_t SQLiteDB::excute_cmd( const char* sql )
 {
-    if ( !STRING_CHECK( sql ) )
+    if( !STRING_CHECK( sql ) )
     {
         DB_ERROR << "sql invalid";
         return TARO_ERR_INVALID_ARG;
@@ -100,7 +194,7 @@ int32_t SQLiteDB::excute_cmd( const char* sql )
 int32_t SQLiteDB::exec_cmd_ret_id( const char* sql, uint64_t& id )
 {
     auto ret = excute_cmd( sql );
-    if ( ret == TARO_OK )
+    if( ret == TARO_OK )
     {
         id = sqlite3_last_insert_rowid( handler_ );
     }
@@ -109,7 +203,7 @@ int32_t SQLiteDB::exec_cmd_ret_id( const char* sql, uint64_t& id )
 
 DBQueryResultSPtr SQLiteDB::query( const char* sql )
 {
-    if ( !STRING_CHECK( sql ) )
+    if( !STRING_CHECK( sql ) )
     {
         DB_ERROR << "sql invalid";
         return nullptr;
@@ -152,7 +246,7 @@ int32_t SQLiteDB::rollback_transaction()
 
 int32_t SQLiteDB::exec_trans( const char* cmd )
 {
-    if ( !STRING_CHECK( cmd ) )
+    if( !STRING_CHECK( cmd ) )
     {
         DB_ERROR << "cmd invalid";
         return TARO_ERR_INVALID_ARG;
@@ -176,6 +270,111 @@ int32_t SQLiteDB::exec_trans( const char* cmd )
         return TARO_ERR_FAILED;
     }
     return TARO_OK;
+}
+
+std::string SQLiteDB::create_tbl_sql( const char* cls_name,
+    std::vector<ClsMemberReflectorSPtr> const& members,
+    CreateTblConstraint const& constraint )
+{
+    TARO_ASSERT( STRING_CHECK( cls_name ) && members.size() > 0 );
+
+    // 获取约束条件
+    std::set< std::string > primar_keys;
+    std::vector< std::pair<std::string, std::string> > forein_keys;
+    std::map< std::string, std::vector< DBContraintArgBaseSPtr > > col_cstrs;
+    for( auto& one : constraint.contrains )
+    {
+        auto impl = DBContraintImpl::get( one );
+        for( auto& arg : impl->kinds_ )
+        {
+            if( arg->kind() == eDBConstraintPrimaryKey )
+            {
+                primar_keys.insert( one.name() );
+            }
+            else if( arg->kind() == eDBConstraintForeignKey )
+            {
+                auto ptr = std::dynamic_pointer_cast< DBContraintArg >( arg );
+                forein_keys.emplace_back( std::make_pair( one.name(), ptr->get() ) );
+            }
+            else
+            {
+                col_cstrs[one.name()].emplace_back( arg );
+            }
+        }
+    }
+
+    if( primar_keys.empty() )
+    {
+        DB_ERROR << "primary key not found";
+        return "";
+    }
+
+    std::map< std::string, std::string > col_decl;
+    for( auto& col : members )
+    {
+        // 列类型转换为字符串
+        std::string value;
+        if( !type_to_str( col->get_type(), value ) )
+        {
+            DB_ERROR << "column:" << col->get_name() << " type format error";
+            return "";
+        }
+
+        // 列约束转换为字符串
+        auto iter = col_cstrs.find( col->get_name() );
+        if( iter != col_cstrs.end() )
+        {
+            for( size_t i = 0; i < iter->second.size(); ++i )
+            {
+                value += " " + constr_to_str( iter->second[i] );
+            }
+        }
+        col_decl[col->get_name()] = value;
+    }
+
+    /// 组织SQL
+    std::stringstream ss;
+    ss << "create table ";
+    if( constraint.create_when_no_exit.valid() )
+    {
+        ss << "if not exists ";
+    }
+    ss << cls_name << "(";
+
+    for( auto& one : col_decl )
+    {
+        ss << one.first << " " << one.second << ",";
+    }
+
+    ss << "primary key(";
+    size_t n = 0;
+    for( auto& k : primar_keys )
+    {
+        ss << k;
+        if( n < primar_keys.size() - 1 )
+        {
+            ss << ",";
+        }
+        ++n;
+    }
+    ss << ")";
+
+    if( !forein_keys.empty() )
+    {
+        ss << ",";
+        size_t n = 0;
+        for( ; n < forein_keys.size(); ++n )
+        {
+            ss << "foreign key (" << forein_keys[n].first << ") references " << forein_keys[n].second;
+            if( n < primar_keys.size() - 1 )
+            {
+                ss << ",";
+            }
+        }
+    }
+
+    ss << ");";
+    return ss.str();
 }
 
 NAMESPACE_TARO_DB_END

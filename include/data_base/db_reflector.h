@@ -90,7 +90,8 @@ PUBLIC: // 公共函数
     */
     virtual const std::type_info* get_type() const override final
     {
-        return &typeid( decltype( ( ( Class* )0 )->*mptr_ ) );
+        Class* obj = ( Class* )0;
+        return &typeid( decltype( obj->*mptr_ ) );
     }
 
     /**
