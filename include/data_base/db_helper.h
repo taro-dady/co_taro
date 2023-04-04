@@ -249,6 +249,158 @@ inline const char* get_class_member( const char* n )
     return ptr + 2;
 }
 
+// 条件描述
+struct TARO_DLL_EXPORT DBCond
+{
+PUBLIC: // 公共函数
+
+    /**
+    * @brief 构造函数
+    * 
+    * @param[in] name 变量名称
+    */
+    DBCond( const char* name );
+
+    /**
+    * @brief 析构函数
+    */
+    ~DBCond();
+
+    /**
+    * @brief 是否为空
+    * 
+    * @param[in] null true 为空 false 不为空
+    */
+    DBCond& is_null( bool null = true );
+
+    /**
+    * @brief 相等条件
+    * 
+    * @param[in] a 比较的值
+    */
+    template<typename A>
+    DBCond& operator=( A const& a )
+    {
+        set_value( "=", value_to_str( a ) );
+        return *this;
+    }
+
+    /**
+    * @brief 小于比较
+    * 
+    * @param[in] a 比较的值
+    */
+    template<typename A>
+    DBCond& operator<( A const& a )
+    {
+        set_value( "<", value_to_str( a ) );
+        return *this;
+    }
+
+    /**
+    * @brief 小于等于比较
+    * 
+    * @param[in] a 比较的值
+    */
+    template<typename A>
+    DBCond& operator<=( A const& a )
+    {
+        set_value( "<=", value_to_str( a ) );
+        return *this;
+    }
+
+    /**
+    * @brief 大于比较
+    * 
+    * @param[in] a 比较的值
+    */
+    template<typename A>
+    DBCond& operator>( A const& a )
+    {
+        set_value( ">", value_to_str( a ) );
+        return *this;
+    }
+
+    /**
+    * @brief 大于等于比较
+    * 
+    * @param[in] a 比较的值
+    */
+    template<typename A>
+    DBCond& operator>=( A const& a )
+    {
+        set_value( ">=", value_to_str( a ) );
+        return *this;
+    }
+
+PRIVATE: // 私有类型
+
+    friend struct DBWhere;
+
+PRIVATE: // 私有函数
+
+    TARO_NO_COPY( DBCond );
+
+    /**
+    * @brief 设置操作符与值
+    * 
+    * @param[in] op  操作符
+    * @param[in] val 值
+    */
+    void set_value( std::string const& op, std::string const& val );
+
+    /**
+    * @brief 转换为字符串
+    */
+    std::string to_str() const;
+
+PRIVATE: // 私有变量
+
+    struct Impl;
+    Impl* impl_;
+};
+
+struct DBWhereImpl;
+
+// 查询条件集合
+struct DBWhere
+{
+PUBLIC: // 公共函数
+
+    /**
+    * @brief 构造函数
+    * 
+    * @param[in] cond 条件对象
+    */
+    DBWhere( DBCond const& cond );
+
+    /**
+    * @brief 添加与条件
+    * 
+    * @param[in] cond 条件对象
+    */
+    DBWhere& and( DBCond const& cond );
+
+    /**
+    * @brief 添加或条件
+    * 
+    * @param[in] cond 条件对象
+    */
+    DBWhere& or( DBCond const& cond );
+
+PRIVATE: // 私有类型
+
+    friend struct DBWhereImpl;
+    
+PRIVATE: // 私有函数
+
+    TARO_NO_COPY( DBWhere );
+
+PRIVATE: // 私有变量
+
+    DBWhereImpl* impl_;
+};
+
 NAMESPACE_TARO_DB_END
 
 // 获取名称
