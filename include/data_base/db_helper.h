@@ -4,6 +4,7 @@
 #include "data_base/defs.h"
 #include "base/memory/optional.h"
 #include "base/serialize/type_traits.h"
+#include <set>
 #include <vector>
 #include <string>
 
@@ -188,10 +189,309 @@ PRIVATE: // 私有变量
     DBContraintImpl* impl_;
 };
 
+// 条件的内部变量
+struct DBCondImpl;
+
+// 条件描述
+struct TARO_DLL_EXPORT DBCond
+{
+PUBLIC: // 公共函数
+
+    /**
+    * @brief 构造函数
+    */
+    DBCond();
+
+    /**
+    * @brief 构造函数
+    * 
+    * @param[in] name 变量名称
+    */
+    DBCond( const char* name );
+
+    /**
+    * @brief 构造函数
+    * 
+    * @param[in] other 其他对象
+    */
+    DBCond( DBCond&& other );
+
+    /**
+    * @brief 析构函数
+    */
+    ~DBCond();
+
+    /**
+    * @brief 移动赋值
+    * 
+    * @param[in] other 其他对象
+    */
+    DBCond& operator=( DBCond&& other );
+
+    /**
+    * @brief 是否为空
+    * 
+    * @param[in] null true 为空 false 不为空
+    */
+    DBCond& is_null( bool null = true );
+
+    /**
+    * @brief 相等条件
+    * 
+    * @param[in] a 比较的值 参数必须传值否则在字符串时会导致模板特化错误，比如 = "jack" 就会被特化为<char [5]>
+    */
+    template<typename A>
+    DBCond& operator=( A a )
+    {
+        set_value( "=", value_to_str( a ) );
+        return *this;
+    }
+
+    /**
+    * @brief 小于比较
+    * 
+    * @param[in] a 比较的值
+    */
+    template<typename A>
+    DBCond& operator<( A a )
+    {
+        set_value( "<", value_to_str( a ) );
+        return *this;
+    }
+
+    /**
+    * @brief 小于等于比较
+    * 
+    * @param[in] a 比较的值
+    */
+    template<typename A>
+    DBCond& operator<=( A a )
+    {
+        set_value( "<=", value_to_str( a ) );
+        return *this;
+    }
+
+    /**
+    * @brief 大于比较
+    * 
+    * @param[in] a 比较的值
+    */
+    template<typename A>
+    DBCond& operator>( A a )
+    {
+        set_value( ">", value_to_str( a ) );
+        return *this;
+    }
+
+    /**
+    * @brief 大于等于比较
+    * 
+    * @param[in] a 比较的值
+    */
+    template<typename A>
+    DBCond& operator>=( A a )
+    {
+        set_value( ">=", value_to_str( a ) );
+        return *this;
+    }
+
+    /**
+    * @brief 条件的与关系
+    * 
+    * @param[in] c 条件对象
+    */
+    DBCond& operator&&( DBCond const& c );
+
+    /**
+    * @brief 条件的或关系
+    * 
+    * @param[in] c 条件对象
+    */
+    DBCond& operator||( DBCond const& c );
+
+PRIVATE: // 私有类型
+
+    friend struct DBCondImpl;
+
+PRIVATE: // 私有函数
+
+    TARO_NO_COPY( DBCond );
+
+    /**
+    * @brief 设置操作符与值
+    * 
+    * @param[in] op  操作符
+    * @param[in] val 值
+    */
+    void set_value( std::string const& op, std::string const& val );
+
+PRIVATE: // 私有变量
+
+    DBCondImpl* impl_;
+};
+
+struct DBFilterImpl;
+
+// 过滤器，用于操作结构体的部分数据
+struct TARO_DLL_EXPORT DBFilter
+{
+PUBLIC: // 公共函数
+
+    /**
+    * @brief 构造函数
+    */
+    DBFilter();
+
+    /**
+    * @brief 构造函数
+    * 
+    * @param[in] black true 表示黑名单 false 表示白名单
+    */
+    DBFilter( bool black );
+
+    /**
+    * @brief 构造函数
+    * 
+    * @param[in] other 其他对象
+    */
+    DBFilter( DBFilter&& other );
+
+    /**
+    * @brief 析构函数
+    */
+    ~DBFilter();
+
+    /**
+    * @brief 移动赋值
+    * 
+    * @param[in] other 其他对象
+    */
+    DBFilter& operator=( DBFilter&& other );
+
+    /**
+    * @brief 添加参数
+    * 
+    * @param[in] name 参数名称
+    */
+    DBFilter& operator<<( std::string const& name );
+
+PRIVATE: // 私有类型
+
+    friend struct DBFilterImpl;
+
+PRIVATE: // 私有函数
+
+    TARO_NO_COPY( DBFilter );
+
+PRIVATE: // 私有变量
+
+    DBFilterImpl* impl_;
+};
+
+// 指定操作范围
+struct TARO_DLL_EXPORT DBLimit
+{
+    /**
+    * @brief 构造函数
+    * 
+    * @param[in] cnt    数量
+    * @param[in] offset 开始位置
+    */
+    DBLimit( int32_t cnt = 0, int32_t offset = -1 )
+        : offset_( offset )
+        , count_( cnt )
+    {}
+
+    int32_t offset_; // 开始位置
+    int32_t count_;  // 数量
+};
+
+struct TARO_DLL_EXPORT DBNull
+{
+PUBLIC: // 公共函数
+
+    /**
+    * @brief 构造函数
+    * 
+    * @param[in] name 参数名称
+    */
+    DBNull( const char* name );
+
+    /**
+    * @brief 析构函数
+    */
+    ~DBNull();
+
+    /**
+    * @brief 获取名称
+    */
+    const char* name();
+
+PRIVATE: // 私有函数
+
+    TARO_NO_COPY( DBNull );
+
+PRIVATE: // 私有类型
+
+    struct Impl;
+    Impl* impl_;
+};
+
+struct TARO_DLL_EXPORT DBOrder
+{
+PUBLIC: // 公共函数
+
+    /**
+    * @brief 构造函数
+    * 
+    * @param[in] name 参数名称
+    * @param[in] asc  升序
+    */
+    DBOrder( const char* name, bool asc = true );
+
+    /**
+    * @brief 析构函数
+    */
+    ~DBOrder();
+
+    /**
+    * @brief 获取名称
+    */
+    const char* name();
+
+    /**
+    * @brief 是否为升序
+    */
+    bool ascend() const;
+
+PRIVATE: // 私有函数
+
+    TARO_NO_COPY( DBOrder );
+
+PRIVATE: // 私有类型
+
+    struct Impl;
+    Impl* impl_;
+};
+
+// 获取成员名称 如A::member 获取member
+inline const char* get_class_member( const char* n )
+{
+    const char *ptr = nullptr, *tmp = n;
+    while( ( tmp = strstr( tmp, "::" ) ) != nullptr )
+    {
+        ptr = tmp;
+        tmp = tmp + 2;
+    }
+    TARO_ASSERT( ptr != nullptr );
+    return ptr + 2;
+}
+
+/************************* create table ********************************************/
 // 建表约束
 struct CreateTblConstraint
 {
-    Optional<bool> create_when_no_exit; // 若表存在则不建新表
+    Optional<bool> create_when_no_exit;    // 若表存在则不建新表
     std::vector< DBContraint > contrains;  // 列的约束条件集合
 };
 
@@ -236,170 +536,127 @@ void expand_create_param( CreateTblConstraint& params, T&& t, Args&&... args )
     expand_create_param( params, std::forward<Args>( args )... );
 }
 
-// 获取成员名称 如A::member 获取member
-inline const char* get_class_member( const char* n )
+/************************* modify table ********************************************/
+struct DBModifyParam
 {
-    const char *ptr = nullptr, *tmp = n;
-    while( ( tmp = strstr( tmp, "::" ) ) != nullptr )
+    DBCond cond_; // 条件变量
+    DBFilter filter_; // 过滤器
+    std::set<std::string> null_; // 空值
+};
+
+template<typename T>
+struct set_modify_tbl_param {};
+
+template<>
+struct set_modify_tbl_param<DBCond>
+{
+    static void set( DBModifyParam& params, DBCond&& c )
     {
-        ptr = tmp;
-        tmp = tmp + 2;
+        params.cond_ = std::move( c );
     }
-    TARO_ASSERT( ptr != nullptr );
-    return ptr + 2;
+};
+
+template<>
+struct set_modify_tbl_param<DBFilter>
+{
+    static void set( DBModifyParam& params, DBFilter&& filter )
+    {
+        params.filter_ = std::move( filter );
+    }
+};
+
+template<>
+struct set_modify_tbl_param<DBNull>
+{
+    static void set( DBModifyParam& params, DBNull&& n )
+    {
+        params.null_.insert( n.name() );
+    }
+};
+
+inline void expand_modify_param( DBModifyParam& params )
+{
+
 }
 
-// 条件描述
-struct TARO_DLL_EXPORT DBCond
+template< typename T >
+void expand_modify_param( DBModifyParam& params, T&& t )
 {
-PUBLIC: // 公共函数
+    set_modify_tbl_param< typename UnWrapperParam<T>::type >::set( params, std::move( t ) );
+}
 
-    /**
-    * @brief 构造函数
-    * 
-    * @param[in] name 变量名称
-    */
-    DBCond( const char* name );
+template< typename T, typename... Args >
+void expand_modify_param( DBModifyParam& params, T&& t, Args&&... args )
+{
+    set_modify_tbl_param< typename UnWrapperParam<T>::type >::set( params, std::move( t ) );
+    expand_modify_param( params, std::forward<Args>( args )... );
+}
 
-    /**
-    * @brief 析构函数
-    */
-    ~DBCond();
-
-    /**
-    * @brief 是否为空
-    * 
-    * @param[in] null true 为空 false 不为空
-    */
-    DBCond& is_null( bool null = true );
-
-    /**
-    * @brief 相等条件
-    * 
-    * @param[in] a 比较的值
-    */
-    template<typename A>
-    DBCond& operator=( A const& a )
-    {
-        set_value( "=", value_to_str( a ) );
-        return *this;
-    }
-
-    /**
-    * @brief 小于比较
-    * 
-    * @param[in] a 比较的值
-    */
-    template<typename A>
-    DBCond& operator<( A const& a )
-    {
-        set_value( "<", value_to_str( a ) );
-        return *this;
-    }
-
-    /**
-    * @brief 小于等于比较
-    * 
-    * @param[in] a 比较的值
-    */
-    template<typename A>
-    DBCond& operator<=( A const& a )
-    {
-        set_value( "<=", value_to_str( a ) );
-        return *this;
-    }
-
-    /**
-    * @brief 大于比较
-    * 
-    * @param[in] a 比较的值
-    */
-    template<typename A>
-    DBCond& operator>( A const& a )
-    {
-        set_value( ">", value_to_str( a ) );
-        return *this;
-    }
-
-    /**
-    * @brief 大于等于比较
-    * 
-    * @param[in] a 比较的值
-    */
-    template<typename A>
-    DBCond& operator>=( A const& a )
-    {
-        set_value( ">=", value_to_str( a ) );
-        return *this;
-    }
-
-PRIVATE: // 私有类型
-
-    friend struct DBWhere;
-
-PRIVATE: // 私有函数
-
-    TARO_NO_COPY( DBCond );
-
-    /**
-    * @brief 设置操作符与值
-    * 
-    * @param[in] op  操作符
-    * @param[in] val 值
-    */
-    void set_value( std::string const& op, std::string const& val );
-
-    /**
-    * @brief 转换为字符串
-    */
-    std::string to_str() const;
-
-PRIVATE: // 私有变量
-
-    struct Impl;
-    Impl* impl_;
+/************************* query table ********************************************/
+struct DBQueryParam
+{
+    DBCond cond_; // 条件
+    DBFilter filter_; // 过滤器
+    Optional<DBLimit> limit_; // 查询范围
+    Optional< std::pair<std::string, bool> > order_; // 升序降序参数
 };
 
-struct DBWhereImpl;
+template<typename T>
+struct set_query_param {};
 
-// 查询条件集合
-struct DBWhere
+template<>
+struct set_query_param<DBCond>
 {
-PUBLIC: // 公共函数
-
-    /**
-    * @brief 构造函数
-    * 
-    * @param[in] cond 条件对象
-    */
-    DBWhere( DBCond const& cond );
-
-    /**
-    * @brief 添加与条件
-    * 
-    * @param[in] cond 条件对象
-    */
-    DBWhere& and( DBCond const& cond );
-
-    /**
-    * @brief 添加或条件
-    * 
-    * @param[in] cond 条件对象
-    */
-    DBWhere& or( DBCond const& cond );
-
-PRIVATE: // 私有类型
-
-    friend struct DBWhereImpl;
-    
-PRIVATE: // 私有函数
-
-    TARO_NO_COPY( DBWhere );
-
-PRIVATE: // 私有变量
-
-    DBWhereImpl* impl_;
+    static void set( DBQueryParam& params, DBCond&& c )
+    {
+        params.cond_ = std::move( c );
+    }
 };
+
+template<>
+struct set_query_param<DBOrder>
+{
+    static void set( DBQueryParam& params, DBOrder&& order )
+    {
+        params.order_ = std::make_pair( order.name(), order.ascend() );
+    }
+};
+
+template<>
+struct set_query_param<DBLimit>
+{
+    static void set( DBQueryParam& params, DBLimit&& limit )
+    {
+        params.limit_ = limit;
+    }
+};
+
+template<>
+struct set_query_param<DBFilter>
+{
+    static void set( DBQueryParam& params, DBFilter&& filter )
+    {
+        params.filter_ = std::move( filter );
+    }
+};
+
+inline void expand_query_param( DBQueryParam& params )
+{
+
+}
+
+template< typename T >
+void expand_query_param( DBQueryParam& params, T&& t )
+{
+    set_query_param< typename UnWrapperParam<T>::type >::set( params, std::move( t ) );
+}
+
+template< typename T, typename... Args >
+void expand_query_param( DBQueryParam& params, T&& t, Args&&... args )
+{
+    set_query_param< typename UnWrapperParam<T>::type >::set( params, std::move( t ) );
+    expand_query_param( params, std::forward<Args>( args )... );
+}
 
 NAMESPACE_TARO_DB_END
 
@@ -410,3 +667,30 @@ NAMESPACE_TARO_DB_END
 // 约束
 #define DB_CSTR( x ) \
     taro::db::DBContraint( DB_MEM( x ) )
+
+// 条件
+#define DB_COND( x ) \
+    taro::db::DBCond( DB_MEM( x ) )
+
+// 空值
+#define DB_NULL( x ) \
+    taro::db::DBNull( DB_MEM( x ) )
+
+// 查询序列
+#define DB_ASCEND( x ) \
+    taro::db::DBOrder( DB_MEM( x ), true )
+
+#define DB_DESCEND( x ) \
+    taro::db::DBOrder( DB_MEM( x ), false )
+
+// 查询范围
+#define DB_LIMIT( ... ) \
+    taro::db::DBLimit( __VA_ARGS__ )
+
+// 黑名单
+#define DB_BLACK \
+    taro::db::DBFilter( true )
+
+// 白名单
+#define DB_WHITE \
+    taro::db::DBFilter( false )

@@ -121,6 +121,18 @@ char* SQLiteDBResult::get_col_val( int32_t col )
     return ( char* )sqlite3_column_text( stmt_, col );
 }
 
+std::vector<std::string> SQLiteDBResult::get_columns()
+{
+    std::vector<std::string> ret;
+
+    auto col_num = sqlite3_column_count( stmt_ );
+    for( int i = 0; i < col_num; ++i )
+    {
+        ret.emplace_back( sqlite3_column_name( stmt_, i ) );
+    }
+    return ret;
+}
+
 SQLiteDB::SQLiteDB()
     : handler_( nullptr )
 {
@@ -376,5 +388,187 @@ std::string SQLiteDB::create_tbl_sql( const char* cls_name,
     ss << ");";
     return ss.str();
 }
+
+std::string SQLiteDB::query_tbl_sql( 
+                        const char* cls_name, 
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        DBQueryParam const& param )
+{
+    TARO_ASSERT( STRING_CHECK( cls_name ) && members.size() > 0 );
+
+    // 组装查询列
+    std::string col_str = "*";
+    auto filter = DBFilterImpl::get( param.filter_ );
+    if( filter && !filter->names_.empty() )
+    {
+        col_str = "";
+        for ( auto const& one : members )
+        {
+            auto& name = one->get_name();
+            auto iter = filter->names_.find( name );
+            if ( filter->black_ )
+            {
+                if ( iter != filter->names_.end() )
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                if ( iter == filter->names_.end() )
+                {
+                    continue;
+                }
+            }
+
+            if ( col_str.empty() )
+            {
+                col_str = name;
+            }
+            else
+            {
+                col_str += "," + name;
+            }
+        }
+    }
+
+    std::stringstream ss;
+    ss << "select " << col_str << " from " << cls_name;
+
+    auto cond = DBCondImpl::to_str( param.cond_ );
+    if( !cond.empty() )
+    {
+        ss << " where " << cond;
+    }
+
+    if( param.order_.valid() )
+    {
+        std::string tmp = param.order_.value().second ? "asc" : "desc";
+        ss << " order by " << param.order_.value().first << " " << tmp;
+    }
+
+    if ( param.limit_.valid() )
+    {
+        ss << " limit " << param.limit_.value().count_;
+        if ( param.limit_.value().offset_ >= 0 )
+        {
+            ss << " offset " << param.limit_.value().offset_;
+        }
+    }
+    ss << ";";
+    return ss.str();
+}
+
+std::string SQLiteDB::insert_tbl_sql( 
+                        void* obj,
+                        const char* cls_name, 
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        DBModifyParam const& param )
+{
+    TARO_ASSERT( obj && STRING_CHECK( cls_name ) && !members.empty() );
+
+    std::string keys, values;
+    for ( auto& one : members )
+    {
+        auto const& name = one->get_name();
+
+        // 过滤判断
+        auto filter = DBFilterImpl::get( param.filter_ );
+        if ( nullptr != filter )
+        {
+            auto iter = filter->names_.find( name );
+            if ( filter->black_ )
+            {
+                if ( iter != filter->names_.end() )
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                if ( iter == filter->names_.end() )
+                {
+                    continue;
+                }
+            }
+        }
+
+        // null判断
+        std::string value = "null";
+        if( param.null_.find( name ) == param.null_.end() )
+        {
+            value = one->serialize( obj );
+        }
+        
+        if ( keys.empty() )
+        {
+            keys = name;
+            values = value;
+        }
+        else
+        {
+            keys += "," + name;
+            values += "," + value;
+        }
+    }
+
+    std::stringstream ss;
+    ss << "insert into " << cls_name << " (" << keys << ") values (" << values << ");";
+    return ss.str();
+}
+
+std::string SQLiteDB::update_tbl_sql(
+                        void* obj,
+                        const char* cls_name,
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        DBModifyParam const& param )
+{
+    TARO_ASSERT( obj && STRING_CHECK( cls_name ) && !members.empty() );
+
+    // 组装更新信息
+    std::string update_str;
+    for ( auto const& one : members )
+    {
+        auto const& name = one->get_name();
+
+        // 过滤判断
+        auto filter = DBFilterImpl::get( param.filter_ );
+        if ( nullptr != filter )
+        {
+            auto iter = filter->names_.find( name );
+            if ( filter->black_ )
+            {
+                if ( iter != filter->names_.end() )
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                if ( iter == filter->names_.end() )
+                {
+                    continue;
+                }
+            }
+        }
+
+        if ( !update_str.empty() )
+        {
+            update_str += ",";
+        }
+        update_str += name + "=" + one->serialize( obj ); 
+    }
+
+    std::stringstream ss;
+    ss << "update " << cls_name << " set " << update_str;
+    auto cond = DBCondImpl::to_str( param.cond_ );
+    if( !cond.empty() )
+    {
+        ss << " where " << cond;
+    }
+
+    ss << ";";
+    return ss.str();
+}   
 
 NAMESPACE_TARO_DB_END

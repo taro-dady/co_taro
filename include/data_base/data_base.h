@@ -4,6 +4,7 @@
 #include "data_base/db_helper.h"
 #include "data_base/db_reflector.h"
 #include "base/serialize/str_serialize.h"
+#include <algorithm>
 
 NAMESPACE_TARO_DB_BEGIN
 
@@ -41,7 +42,10 @@ PUBLIC: // 公共函数
     */
     virtual bool next() = 0;
 
-PROTECTED: // 保护函数
+    /**
+    * @brief  获取列信息
+    */
+    virtual std::vector<std::string> get_columns() = 0;
 
     /**
     * @brief  获取列数据
@@ -116,8 +120,9 @@ PUBLIC: // 公共函数
      * @brief 建表
     */
     template<typename T, typename... Args>
-    bool create_table( Args&&... args )
+    int32_t create_table( Args&&... args )
     {
+        // 获取类型的所有信息
         std::string name;
         std::vector<ClsMemberReflectorSPtr> members;
         get_cls_info<T>( name, members );
@@ -127,32 +132,211 @@ PUBLIC: // 公共函数
         CreateTblConstraint constraint;
         expand_create_param( constraint, std::forward<Args>( args )... );
 
-        // 构造建表SQL语句
+        // 转换为SQL语句
         auto cmd = create_tbl_sql( name.c_str(), members, constraint );
         if ( cmd.empty() )
         {
             DB_ERROR << "compose create table sql failed";
-            return false;
+            return TARO_ERR_INVALID_ARG;
         }
 
-        // 执行建表命令
+        // 执行SQL命令
         if ( TARO_OK != excute_cmd( cmd.c_str() ) )
         {
             DB_ERROR << "create failed. sql:" << cmd;
-            return false;
+            return TARO_ERR_FAILED;
         }
-        return true;
+        return TARO_OK;
+    }
+
+    /**
+     * @brief 删除表
+    */
+    template<typename T>
+    int32_t drop_table()
+    {
+        // 查询表名
+        auto type = &typeid( T );
+        DBReflector& inst = DBReflector::instance();
+        auto name = inst.find_class_name( type );
+        if( name.empty() )
+        {
+            // 没有查询到映射关系，则调用建立映射函数
+            T::db_cls_reflect();
+            name = inst.find_class_name( type );
+        }
+        TARO_ASSERT( !name.empty() );
+
+        std::string cmd = "drop table ";
+        cmd += name;
+
+        // 执行SQL命令
+        if ( TARO_OK != excute_cmd( cmd.c_str() ) )
+        {
+            DB_ERROR << "insert failed. sql:" << cmd;
+            return TARO_ERR_FAILED;
+        }
+        return TARO_OK;
+    }
+
+    /**
+     * @brief 查询
+    */
+    template<typename T, typename... Args>
+    std::vector<T> query( Args&&... args )
+    {
+        // 获取类型的所有信息
+        std::string name;
+        std::vector<ClsMemberReflectorSPtr> members;
+        get_cls_info<T>( name, members );
+        TARO_ASSERT( !name.empty() && members.size() );
+
+        // 解析参数
+        DBQueryParam param;
+        expand_query_param( param, std::forward<Args>( args )... );
+
+        // 转换为SQL语句
+        std::vector<T> query_result;
+        auto cmd = query_tbl_sql( name.c_str(), members, param );
+        if ( cmd.empty() )
+        {
+            DB_ERROR << "compose insert table sql failed";
+            return query_result;
+        }
+
+        // 执行SQL命令
+        auto result = query( cmd.c_str() );
+        if ( result == nullptr )
+        {
+            return query_result;
+        }
+
+        // 反序列化数据
+        auto cols = result->get_columns();
+        if ( cols.empty() )
+        {
+            DB_ERROR << "get columns failed";
+            return query_result;
+        }
+
+        do{
+            T element;
+            for( size_t i = 0; i < cols.size(); ++i )
+            {
+                auto iter = std::find_if( members.begin(), members.end(), [&]( ClsMemberReflectorSPtr const& ptr )
+                {
+                    return ptr->get_name() == cols[i];
+                } );
+                TARO_ASSERT( iter != members.end() );
+                ( *iter )->deserialize( ( const char* )result->get_col_val( ( int32_t )i ), ( void* )&element );
+            }
+            query_result.emplace_back( element );
+        }while( result->next() );
+        
+        return query_result;
+    }
+
+    /**
+     * @brief 插入数据
+    */
+    template<typename T, typename... Args>
+    int32_t insert( T const& obj, Args&&... args )
+    {
+        // 获取类型的所有信息
+        std::string name;
+        std::vector<ClsMemberReflectorSPtr> members;
+        get_cls_info<T>( name, members );
+        TARO_ASSERT( !name.empty() && members.size() );
+
+        // 解析参数
+        DBModifyParam param;
+        expand_modify_param( param, std::forward<Args>( args )... );
+
+        // 转换为SQL语句
+        auto cmd = insert_tbl_sql( ( void* )&obj, name.c_str(), members, param );
+        if ( cmd.empty() )
+        {
+            DB_ERROR << "compose insert table sql failed";
+            return TARO_ERR_INVALID_ARG;
+        }
+
+        // 执行SQL命令
+        if ( TARO_OK != excute_cmd( cmd.c_str() ) )
+        {
+            DB_ERROR << "insert failed. sql:" << cmd;
+            return TARO_ERR_FAILED;
+        }
+        return TARO_OK;
+    }
+
+    /**
+     * @brief 更新数据
+    */
+    template<typename T, typename... Args>
+    int32_t update( T const& obj, Args&&... args )
+    {
+        // 获取类型的所有信息
+        std::string name;
+        std::vector<ClsMemberReflectorSPtr> members;
+        get_cls_info<T>( name, members );
+        TARO_ASSERT( !name.empty() && members.size() );
+
+        // 解析参数
+        DBModifyParam param;
+        expand_modify_param( param, std::forward<Args>( args )... );
+
+        // 转换为SQL语句
+        auto cmd = update_tbl_sql( ( void* )&obj, name.c_str(), members, param );
+        if( cmd.empty() )
+        {
+            DB_ERROR << "compose insert table sql failed";
+            return TARO_ERR_INVALID_ARG;
+        }
+
+        // 执行SQL命令
+        if( TARO_OK != excute_cmd( cmd.c_str() ) )
+        {
+            DB_ERROR << "insert failed. sql:" << cmd;
+            return TARO_ERR_FAILED;
+        }
+        return TARO_OK;
     }
 
 PROTECTED: // 保护函数
 
     /**
-     * @brief 组装建表的SQL
+     * @brief 组装建表SQL
     */
     virtual std::string create_tbl_sql( 
                         const char* cls_name, 
                         std::vector<ClsMemberReflectorSPtr> const& members,
                         CreateTblConstraint const& constraint ) = 0;
+
+    /**
+     * @brief 组装查询SQL
+    */
+    virtual std::string query_tbl_sql( 
+                        const char* cls_name, 
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        DBQueryParam const& param ) = 0;
+
+    /**
+     * @brief 组装插入SQL
+    */
+    virtual std::string insert_tbl_sql( 
+                        void* obj,
+                        const char* cls_name, 
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        DBModifyParam const& param ) = 0;
+
+    /**
+     * @brief 组装更新SQL
+    */
+    virtual std::string update_tbl_sql(
+                        void* obj,
+                        const char* cls_name,
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        DBModifyParam const& param ) = 0;
     
 PRIVATE: // 私有函数
 
@@ -170,6 +354,7 @@ PRIVATE: // 私有函数
         name = inst.find_class_name( type );
         if( name.empty() )
         {
+            // 没有查询到映射关系，则调用建立映射函数
             T::db_cls_reflect();
             name = inst.find_class_name( type );
         }

@@ -15,13 +15,15 @@ struct IsString
         bool,
         std::is_same<char*, typename std::remove_reference<typename std::remove_cv<T>::type>::type>::value ||
         std::is_same<char const*, typename std::remove_reference<typename std::remove_cv<T>::type>::type>::value || 
-        std::is_same<std::string, typename std::decay<T>::type>::value
+        std::is_same<std::string, typename std::decay<T>::type>::value ||
+        std::is_same<char const[], typename std::remove_reference<typename std::remove_cv<T>::type>::type>::value ||
+        std::is_same<char [], typename std::remove_reference<typename std::remove_cv<T>::type>::type>::value
     > {};
 
 // 非字符型数据转换为字符
 template<typename T>
 inline typename std::enable_if< !IsString<T>::value, std::string >::type
-value_to_str( T const& val )
+value_to_str( T const& val, std::string const& wrapper = "" )
 {
     std::stringstream ss;
     ss << val;
@@ -29,10 +31,17 @@ value_to_str( T const& val )
 }
 
 // 字符型数据转换为字符
+// wrapper 在数据库中如果为string 如jack需要变为'jack'
 template<typename T>
 inline typename std::enable_if< IsString<T>::value, std::string >::type
-value_to_str( T const& val )
+value_to_str( T const& val, std::string const& wrapper = "'" )
 {
+    if ( !wrapper.empty() )
+    {
+        std::stringstream ss;
+        ss << wrapper << val << wrapper;
+        return ss.str();
+    }
     return val;
 }
 

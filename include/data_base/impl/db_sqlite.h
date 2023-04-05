@@ -38,6 +38,11 @@ PRIVATE: // 私有函数
     */
     virtual char* get_col_val( int32_t col ) override;
 
+    /**
+    * @brief  获取列信息
+    */
+    virtual std::vector<std::string> get_columns() override;
+
 PRIVATE: // 私有变量
 
     sqlite3_stmt* stmt_;
@@ -120,6 +125,32 @@ PRIVATE: // 私有函数
                         const char* cls_name, 
                         std::vector<ClsMemberReflectorSPtr> const& members,
                         CreateTblConstraint const& constraint ) override;
+
+    /**
+     * @brief 组装查询SQL
+    */
+    virtual std::string query_tbl_sql( 
+                        const char* cls_name, 
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        DBQueryParam const& param ) override;
+
+    /**
+     * @brief 组装插入的SQL
+    */
+    virtual std::string insert_tbl_sql( 
+                        void* obj,
+                        const char* cls_name, 
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        DBModifyParam const& param ) override;
+
+    /**
+     * @brief 组装更新SQL
+    */
+    virtual std::string update_tbl_sql(
+                        void* obj,
+                        const char* cls_name,
+                        std::vector<ClsMemberReflectorSPtr> const& members,
+                        DBModifyParam const& param ) override;
 
 PRIVATE: // 私有变量
 
