@@ -569,6 +569,19 @@ std::string SQLiteDB::update_tbl_sql(
 
     ss << ";";
     return ss.str();
-}   
+}
+
+std::string SQLiteDB::remove_tbl_sql( const char* cls_name, DBCond const& cond )
+{
+    std::stringstream ss;
+    ss << "delete from " << cls_name;
+    auto where_str = DBCondImpl::to_str( cond );
+    if( !where_str.empty() )
+    {
+        ss << " where " << where_str;
+    }
+    ss << ";";
+    return ss.str();
+}
 
 NAMESPACE_TARO_DB_END

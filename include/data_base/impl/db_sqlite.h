@@ -152,6 +152,11 @@ PRIVATE: // 私有函数
                         std::vector<ClsMemberReflectorSPtr> const& members,
                         DBModifyParam const& param ) override;
 
+    /**
+     * @brief 组装删除SQL
+    */
+    virtual std::string remove_tbl_sql( const char* cls_name, DBCond const& cond ) override;
+
 PRIVATE: // 私有变量
 
     sqlite3* handler_;

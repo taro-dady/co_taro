@@ -82,7 +82,7 @@ void db_test1()
         auto result = db->query<aa::Employee>(
             DB_BLACK << DB_MEM( aa::Employee::name ), // 不查询name
             DB_COND( aa::Employee::age ) > 10 && DB_COND( aa::Employee::age ) <= 20 && DB_COND( aa::Employee::name ).is_null( false ), // 查询条件
-            DB_LIMIT( 3, 0 ),  // 查询范围
+            DB_LIMIT( 3, 0 ),  // 查询范围 3行数据，起始位置为0
             DB_DESCEND( aa::Employee::age ) ); // 升序还是降序DB_ASCEND
         std::cout << "query 2 --------------" << std::endl;
         TARO_ASSERT( 2 == result.size() );
@@ -98,6 +98,19 @@ void db_test1()
     {
         auto result = db->query<aa::Employee>( DB_COND( aa::Employee::name ) = "jack3" );
         TARO_ASSERT( 1 == result.size() );
+        for( auto& one : result )
+        {
+            std::cout << one.name << " " << one.age << std::endl;
+        }
+    }
+
+    ret = db->remove<aa::Employee>( DB_COND( aa::Employee::name ) = "jack2");
+    TARO_ASSERT( ret == TARO_OK );
+    {
+        std::cout << "after remove --------------" << std::endl;
+        // 查询全部数据
+        auto result = db->query<aa::Employee>();
+        TARO_ASSERT( 3 == result.size() );
         for( auto& one : result )
         {
             std::cout << one.name << " " << one.age << std::endl;

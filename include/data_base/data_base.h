@@ -302,6 +302,40 @@ PUBLIC: // 公共函数
         return TARO_OK;
     }
 
+    /*
+    * @brief 删除指定行
+    */
+    template<typename T>
+    int32_t remove( DBCond const& cond = DBCond() )
+    {
+        auto type = &typeid( T );
+        DBReflector& inst = DBReflector::instance();
+        auto name = inst.find_class_name( type );
+        if( name.empty() )
+        {
+            // 没有查询到映射关系，则调用建立映射函数
+            T::db_cls_reflect();
+            name = inst.find_class_name( type );
+        }
+        TARO_ASSERT( !name.empty() );
+
+        // 转换为SQL语句
+        auto cmd = remove_tbl_sql( name.c_str(), cond );
+        if( cmd.empty() )
+        {
+            DB_ERROR << "compose remove table sql failed";
+            return TARO_ERR_INVALID_ARG;
+        }
+
+        // 执行SQL命令
+        if( TARO_OK != excute_cmd( cmd.c_str() ) )
+        {
+            DB_ERROR << "remove failed. sql:" << cmd;
+            return TARO_ERR_FAILED;
+        }
+        return TARO_OK;
+    }
+
 PROTECTED: // 保护函数
 
     /**
@@ -337,6 +371,11 @@ PROTECTED: // 保护函数
                         const char* cls_name,
                         std::vector<ClsMemberReflectorSPtr> const& members,
                         DBModifyParam const& param ) = 0;
+
+    /**
+     * @brief 组装删除SQL
+    */
+    virtual std::string remove_tbl_sql( const char* cls_name, DBCond const& cond ) = 0;
     
 PRIVATE: // 私有函数
 
