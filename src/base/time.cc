@@ -53,6 +53,15 @@ SystemTime::SystemTime( int64_t const& t )
     impl_->timepoint_ = std::chrono::system_clock::from_time_t( t );
 }
 
+SystemTime::~SystemTime()
+{
+    if ( nullptr != impl_ )
+    {
+        delete impl_;
+        impl_ = nullptr;
+    } 
+}
+
 int64_t SystemTime::current_ms()
 {
     auto duration = std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now().time_since_epoch() );

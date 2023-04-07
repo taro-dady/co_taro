@@ -60,6 +60,11 @@ PUBLIC: // 公共函数
     SystemTime( int64_t const& t );
 
     /**
+    * @brief 析构函数
+    */
+    ~SystemTime();
+
+    /**
     * @brief 获取当前时间与系统启动时刻的时间差（毫秒）
     */
     static int64_t current_ms();

@@ -18,7 +18,7 @@ void client_handle( net::TcpClientSPtr const& client )
         if ( ret > 0 )
         {
             std::string resp( buf, ret );
-            NET_WARN << "receive:" << resp << std::endl;
+            NET_TRACE << "receive:" << resp << std::endl;
             resp += " response";  
             ret = client->send( ( char* )resp.c_str(), resp.length() );
             if ( ret <= 0 ) 
@@ -29,7 +29,7 @@ void client_handle( net::TcpClientSPtr const& client )
         }
         else if( ret == TARO_ERR_TIMEOUT )
         {
-            NET_WARN << "wait timeout";
+            NET_TRACE << "wait timeout";
         }
         else
         {
@@ -43,6 +43,7 @@ void client_handle( net::TcpClientSPtr const& client )
 void tcp_svr_test()
 {
     log::set_sys_rotate_cfg( "log/tcp_server" );
+    log::set_sys_level( log::eLogLevelTrace );
     
     // 协程开启tcp服务
     co_run []()
@@ -57,7 +58,7 @@ void tcp_svr_test()
                 NET_WARN << "server invalid.";
                 break;
             }
-            NET_WARN << "tcp server accept create";
+            NET_TRACE << "new connection ...";
 
             // 接收处理对端数据的协程
             co_run std::bind( client_handle, client );
@@ -70,6 +71,7 @@ void tcp_svr_test()
 void tcp_client_test()
 {
     log::set_sys_rotate_cfg( "log/tcp_client" );
+    log::set_sys_level( log::eLogLevelTrace );
     
     co_run []()
     {
