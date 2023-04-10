@@ -111,6 +111,11 @@ PUBLIC: // 公共函数
     */
     bool has_circle() const;
 
+    /**
+    * @brief 获取所有节点
+    */
+    std::vector<GraphyNodeSPtr> all_nodes() const;
+
 PRIVATE: // 私有函数
 
     TARO_NO_COPY( Graph );

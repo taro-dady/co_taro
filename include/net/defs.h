@@ -8,7 +8,7 @@
 
 #define NAMESPACE_TARO_NET_BEGIN namespace taro { namespace net{
 #define NAMESPACE_TARO_NET_END }}
-#define USING_NAMESPACE_TRAO_NET using namespace taro::net;
+#define USING_NAMESPACE_TARO_NET using namespace taro::net;
 
 #define NET_FATAL taro::log::LogWriter( "net", taro::log::eLogLevelFatal, __FILE__, __FUNCTION__, __LINE__ ).stream<std::stringstream>()
 #define NET_ERROR taro::log::LogWriter( "net", taro::log::eLogLevelError, __FILE__, __FUNCTION__, __LINE__ ).stream<std::stringstream>()

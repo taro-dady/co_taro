@@ -71,7 +71,7 @@ PUBLIC: // public
         return function_ != nullptr;
     }
 
-private: // variable
+PRIVATE: // variable
 
     R( *function_ )( Args... );
 };
@@ -109,7 +109,7 @@ PUBLIC: // function
         return ( function_ != nullptr ) && ( class_inst_ != nullptr );
     }
 
-private: // variable
+PRIVATE: // variable
 
     R( T::* function_ )( Args... );
     std::shared_ptr<T> class_inst_;
@@ -161,7 +161,7 @@ PUBLIC:
         return ( function_ != nullptr ) && ( !class_inst_.expired() );
     }
 
-private: // variable
+PRIVATE: // variable
 
     T* raw_pointer_;
     R( T::* function_ )( Args... );
@@ -244,7 +244,7 @@ PUBLIC: // function
         return base_ != nullptr && base_->valid();
     }
 
-private: // variable
+PRIVATE: // variable
 
     std::shared_ptr< FunctionBase<R, Args...> > base_;
 };

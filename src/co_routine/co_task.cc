@@ -39,6 +39,7 @@ CoTask::CoTask( const char* name )
 
 CoTask::~CoTask()
 {
+    impl_->sched->exit();
     join();
 }
 

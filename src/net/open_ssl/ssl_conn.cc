@@ -28,7 +28,7 @@ static int bio_adapter_read( BIO* b, char* out, int outl )
 
 static int bio_adapter_write( BIO* b, const char* in, int inl )
 {
-    USING_NAMESPACE_TRAO_NET
+    USING_NAMESPACE_TARO_NET
 
     SSLAdaptor* inst = ( SSLAdaptor* )BIO_get_data( b );
     TARO_ASSERT( inst );

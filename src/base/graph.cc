@@ -189,6 +189,16 @@ std::vector<GraphyNodeSPtr> Graph::entry() const
     return entry;
 }
 
+std::vector<GraphyNodeSPtr> Graph::all_nodes() const
+{
+    std::vector<GraphyNodeSPtr> nodes;
+    for ( auto const& one : impl_->nodes_ )
+    {
+        nodes.push_back( one.second );
+    }
+    return nodes;
+}
+
 bool Graph::has_circle() const
 {
     if ( impl_->nodes_.empty() )
