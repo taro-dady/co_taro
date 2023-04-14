@@ -72,12 +72,7 @@ PUBLIC: // 公共函数
     *
     * @param[in] uri 数据库资源描述
     */
-    virtual int32_t connect( const char* uri ) = 0;
-
-    /**
-    * @brief  断开数据库
-    */
-    virtual int32_t disconnect() = 0;
+    virtual int32_t connect( DBUri const& uri ) = 0;
 
     /**
     * @brief  执行SQL
@@ -146,6 +141,8 @@ PUBLIC: // 公共函数
             DB_ERROR << "create failed. sql:" << cmd;
             return TARO_ERR_FAILED;
         }
+
+        DB_DEBUG << "create table:" << cmd;
         return TARO_OK;
     }
 
@@ -155,27 +152,16 @@ PUBLIC: // 公共函数
     template<typename T>
     int32_t drop_table()
     {
-        // 查询表名
-        auto type = &typeid( T );
-        DBReflector& inst = DBReflector::instance();
-        auto name = inst.find_class_name( type );
-        if( name.empty() )
-        {
-            // 没有查询到映射关系，则调用建立映射函数
-            T::db_cls_reflect();
-            name = inst.find_class_name( type );
-        }
-        TARO_ASSERT( !name.empty() );
-
         std::string cmd = "drop table ";
-        cmd += name;
+        cmd += get_class_name<T>();
 
         // 执行SQL命令
         if ( TARO_OK != excute_cmd( cmd.c_str() ) )
         {
-            DB_ERROR << "insert failed. sql:" << cmd;
+            DB_ERROR << "drop table failed. sql:" << cmd;
             return TARO_ERR_FAILED;
         }
+        DB_DEBUG << "drop table:" << cmd;
         return TARO_OK;
     }
 
@@ -200,7 +186,7 @@ PUBLIC: // 公共函数
         auto cmd = query_tbl_sql( name.c_str(), members, param );
         if ( cmd.empty() )
         {
-            DB_ERROR << "compose insert table sql failed";
+            DB_ERROR << "compose query table sql failed";
             return query_result;
         }
 
@@ -208,8 +194,11 @@ PUBLIC: // 公共函数
         auto result = query( cmd.c_str() );
         if ( result == nullptr )
         {
+            DB_ERROR << "query failed:" << cmd;
             return query_result;
         }
+
+        DB_DEBUG << "query:" << cmd;
 
         // 反序列化数据
         auto cols = result->get_columns();
@@ -266,7 +255,44 @@ PUBLIC: // 公共函数
             DB_ERROR << "insert failed. sql:" << cmd;
             return TARO_ERR_FAILED;
         }
+
+        DB_DEBUG << "insert:" << cmd;
         return TARO_OK;
+    }
+
+    /**
+     * @brief 插入数据，返回最后插入的id
+    */
+    template<typename T, typename... Args>
+    Optional<uint64_t> insert_ret_id( T const& obj, Args&&... args )
+    {
+        // 获取类型的所有信息
+        std::string name;
+        std::vector<ClsMemberReflectorSPtr> members;
+        get_cls_info<T>( name, members );
+        TARO_ASSERT( !name.empty() && members.size() );
+
+        // 解析参数
+        DBModifyParam param;
+        expand_modify_param( param, std::forward<Args>( args )... );
+
+        // 转换为SQL语句
+        auto cmd = insert_tbl_sql( ( void* )&obj, name.c_str(), members, param );
+        if ( cmd.empty() )
+        {
+            DB_ERROR << "compose insert table sql failed";
+            return Optional<uint64_t>();
+        }
+
+        // 执行SQL命令
+        uint64_t id;
+        if ( TARO_OK != exec_cmd_ret_id( cmd.c_str(), id ) )
+        {
+            DB_ERROR << "insert failed. sql:" << cmd;
+            return Optional<uint64_t>();
+        }
+        DB_DEBUG << "insert:" << cmd;
+        return Optional<uint64_t>( id );
     }
 
     /**
@@ -289,16 +315,18 @@ PUBLIC: // 公共函数
         auto cmd = update_tbl_sql( ( void* )&obj, name.c_str(), members, param );
         if( cmd.empty() )
         {
-            DB_ERROR << "compose insert table sql failed";
+            DB_ERROR << "compose update table sql failed";
             return TARO_ERR_INVALID_ARG;
         }
 
         // 执行SQL命令
         if( TARO_OK != excute_cmd( cmd.c_str() ) )
         {
-            DB_ERROR << "insert failed. sql:" << cmd;
+            DB_ERROR << "update failed. sql:" << cmd;
             return TARO_ERR_FAILED;
         }
+
+        DB_DEBUG << "update:" << cmd;
         return TARO_OK;
     }
 
@@ -308,19 +336,8 @@ PUBLIC: // 公共函数
     template<typename T>
     int32_t remove( DBCond const& cond = DBCond() )
     {
-        auto type = &typeid( T );
-        DBReflector& inst = DBReflector::instance();
-        auto name = inst.find_class_name( type );
-        if( name.empty() )
-        {
-            // 没有查询到映射关系，则调用建立映射函数
-            T::db_cls_reflect();
-            name = inst.find_class_name( type );
-        }
-        TARO_ASSERT( !name.empty() );
-
         // 转换为SQL语句
-        auto cmd = remove_tbl_sql( name.c_str(), cond );
+        auto cmd = remove_tbl_sql( get_class_name<T>().c_str(), cond );
         if( cmd.empty() )
         {
             DB_ERROR << "compose remove table sql failed";
@@ -333,7 +350,76 @@ PUBLIC: // 公共函数
             DB_ERROR << "remove failed. sql:" << cmd;
             return TARO_ERR_FAILED;
         }
+
+        DB_DEBUG << "remove:" << cmd;
         return TARO_OK;
+    }
+
+    /*
+    * @brief 计算总值
+    */
+    template<typename T>
+    Optional<double> sum( const char* column, DBCond const& cond = DBCond() )
+    {
+        TARO_ASSERT( STRING_CHECK( column ), "invalid column" );
+
+        std::string sql = sum_tbl_sql( get_class_name<T>().c_str(), column, cond );
+        TARO_ASSERT( !sql.empty() );
+
+        // 执行SQL命令
+        auto result = query( sql.c_str() );
+        if ( result == nullptr || result->get_col_val( 0 ) == nullptr )
+        {
+            DB_ERROR << "caculate sum error sql:" << sql;
+            return Optional<double>();
+        }
+
+        DB_DEBUG << "sum:" << sql;
+        return Optional<double>( atof( result->get_col_val( 0 ) ) );
+    }
+
+    /*
+    * @brief 计算数量
+    */
+    template<typename T>
+    Optional<size_t> count( DBCond const& cond = DBCond() )
+    {
+        std::string sql = count_tbl_sql( get_class_name<T>().c_str(), cond );
+        TARO_ASSERT( !sql.empty() );
+        
+        // 执行SQL命令
+        auto result = query( sql.c_str() );
+        if ( result == nullptr || result->get_col_val( 0 ) == nullptr )
+        {
+            DB_ERROR << "get count error sql:" << sql;
+            return Optional<size_t>();
+        }
+
+        DB_DEBUG << "count:" << sql;
+        return Optional<size_t>( atol( result->get_col_val( 0 ) ) );
+    }
+
+    /*
+    * @brief 计算平均值
+    */
+    template<typename T>
+    Optional<double> average( const char* column, DBCond const& cond = DBCond() )
+    {
+        TARO_ASSERT( STRING_CHECK( column ), "invalid column" );
+
+        std::string sql = average_tbl_sql( get_class_name<T>().c_str(), column, cond );
+        TARO_ASSERT( !sql.empty() );
+
+        // 执行SQL命令
+        auto result = query( sql.c_str() );
+        if ( result == nullptr || result->get_col_val( 0 ) == nullptr )
+        {
+            DB_ERROR << "caculate average error sql:" << sql;
+            return Optional<double>();
+        }
+
+        DB_DEBUG << "average:" << sql;
+        return Optional<double>( atof( result->get_col_val( 0 ) ) );
     }
 
 PROTECTED: // 保护函数
@@ -376,6 +462,21 @@ PROTECTED: // 保护函数
      * @brief 组装删除SQL
     */
     virtual std::string remove_tbl_sql( const char* cls_name, DBCond const& cond ) = 0;
+
+    /**
+     * @brief 计算平均值
+    */
+    virtual std::string average_tbl_sql( const char* cls_name, const char* col, DBCond const& cond ) = 0;
+
+    /**
+     * @brief 计算总值
+    */
+    virtual std::string sum_tbl_sql( const char* cls_name, const char* col, DBCond const& cond ) = 0;
+
+    /**
+     * @brief 计算数量
+    */
+    virtual std::string count_tbl_sql( const char* cls_name, DBCond const& cond ) = 0;
     
 PRIVATE: // 私有函数
 
@@ -400,16 +501,28 @@ PRIVATE: // 私有函数
         TARO_ASSERT( !name.empty() );
         members = inst.get_member_reflectors( type );
     }
+
+    template<typename T>
+    std::string get_class_name()
+    {
+        auto type = &typeid( T );
+        DBReflector& inst = DBReflector::instance();
+        std::string name = inst.find_class_name( type );
+        if( name.empty() )
+        {
+            // 没有查询到映射关系，则调用建立映射函数
+            T::db_cls_reflect();
+            name = inst.find_class_name( type );
+        }
+        TARO_ASSERT( !name.empty() );
+        return name;
+    }
 };
 
 using DataBaseSPtr = std::shared_ptr<DataBase>;
 
+NAMESPACE_TARO_DB_END
+
 // 数据库类型定义
 #define DB_TYPE_SQLITE "sqlite"
-
-/**
-* @brief  创建Database
-*/
-extern TARO_DLL_EXPORT DataBaseSPtr create_database( const char* type = DB_TYPE_SQLITE );
-
-NAMESPACE_TARO_DB_END
+#define DB_TYPE_MYSQL  "mysql"

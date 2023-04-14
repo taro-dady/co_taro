@@ -132,6 +132,56 @@ void test2()
     std::cout << "test2 ok" << std::endl;
 }
 
+struct NetInterface
+{
+    TARO_JSON_DEFINE(name, ip, mac)
+
+    std::string name;
+    std::string ip;
+    std::string mac;
+};
+
+struct NetConfig
+{
+    TARO_JSON_DEFINE( net )
+    std::vector<NetInterface> net;
+};
+
+void test3()
+{
+    ::remove( "cfg.json" );
+    ::remove( "cfg_back.json" );
+
+    auto cfg = std::make_shared<JsonConfig>();
+    cfg->set_param( "cfg.json", "cfg_back.json" );
+
+    NetConfig nets;
+    {
+        NetInterface item;
+        item.name = "eth0";
+        item.ip = "127.0.0.1";
+        item.mac = "ef:21:34:ab";
+        nets.net.push_back( item );
+    }
+    {
+        NetInterface item;
+        item.name = "eth1";
+        item.ip = "127.0.0.2";
+        item.mac = "ef:21:34:ac";
+        nets.net.push_back( item );
+    }
+    cfg->set_config( nets );
+
+    NetInterface item;
+    cfg->get_config( "net.[1]", item );
+    printf( "interface1:%s %s %s\n", item.name.c_str(), item.ip.c_str(), item.mac.c_str() );
+    cfg->get_config( "net.[0]", item );
+    printf( "interface0:%s %s %s\n", item.name.c_str(), item.ip.c_str(), item.mac.c_str() );
+
+    item.ip = "128.1.1.3";
+    cfg->set_config("net.[0]", item);
+}
+
 int main( int argc, char* argv[] )
 {
     parse_args( argc, argv );
@@ -139,6 +189,8 @@ int main( int argc, char* argv[] )
         test1();
     else if( taro_arg_test_type == 2 )
         test2();
+    else if( taro_arg_test_type == 3 )
+        test3();
     else
         printf( "type unsupport %d\n", taro_arg_test_type );
     return 0;

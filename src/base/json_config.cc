@@ -1,5 +1,6 @@
 
 #include "base/error_no.h"
+#include "base/utils/utils.h"
 #include "base/config/json_config.h"
 #include "base/utils/arg_expander.h"
 #include <fstream>
@@ -53,6 +54,56 @@ static bool load_file( const char* path, Json& value )
         context += line;
     }
     return json_parse( context, value );
+}
+
+extern Optional<int32_t> get_index( std::string const& index )
+{
+    if ( index.front() != '[' || index.back() != ']' )
+    {
+        return Optional<int32_t>();
+    }
+    auto num = index.substr( 1, index.length() - 2 );
+    return to_number( num );
+}
+
+static Json* to_json_path( std::string path, Json const& jcfg )
+{
+    Json* n = ( Json* )&jcfg;
+    while( 1 )
+    {
+        bool end = false;
+        std::string item;
+        auto pos = path.find( "." );
+        if ( pos != std::string::npos )
+        {
+            item = path.substr( 0, pos );
+            path = path.substr( pos + 1 );
+        }
+        else
+        {
+            end  = true;
+            item = path;
+        }
+
+        auto index = get_index( item );
+        if ( index.valid() ) 
+        {
+            if ( n->size() <= ( size_t )index.value() )
+                return nullptr;
+
+            n = &(*n)[index.value()];
+            if ( end ) break;
+        }
+        else
+        {
+            if ( !n->contains( item ) )
+                return nullptr;
+            
+            n = &(*n)[item];
+            if ( end ) break;
+        }
+    }
+    return n;
 }
 
 struct JsonConfig::Impl
@@ -122,9 +173,35 @@ bool JsonConfig::set_config( Json* jcfg )
     return true;
 }
 
+bool JsonConfig::set_config( const char* path, Json* config )
+{
+    auto ret = to_json_path( path, impl_->cfg_ );
+    if ( nullptr == ret )
+    {
+        return false;
+    }
+
+    *ret = *config;
+    save_file( impl_->path_.c_str(), impl_->cfg_ );
+    if ( !impl_->path_bk_.empty() )
+    {
+        save_file( impl_->path_bk_.c_str(), impl_->cfg_ );
+    }
+    return true;
+}
+
 void JsonConfig::get_config( Json** config )
 {
     *config = &impl_->cfg_;
+}
+
+void JsonConfig::get_config( const char* path, Json** config )
+{
+    auto ret = to_json_path( path, impl_->cfg_ );
+    if ( nullptr != ret )
+    {
+        *config = ret;
+    }
 }
 
 NAMESPACE_TARO_END

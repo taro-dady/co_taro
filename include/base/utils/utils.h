@@ -1,7 +1,7 @@
 ﻿
 #pragma once
 
-#include "base/base.h"
+#include "base/memory/optional.h"
 #include <limits>
 #include <vector>
 #include <sstream>
@@ -31,6 +31,20 @@ inline bool is_newer( T value, T pre_val )
     
     // 是否是回绕的判断
     return ( pre_val - value ) > point;
+}
+
+// 转换为数字
+inline Optional<int32_t> to_number( std::string const &str )
+{
+    std::stringstream ss;
+    ss << str;
+    int32_t value;
+    ss >> value;
+
+    Optional<int32_t> ret;
+    if ( !ss.fail() )
+        ret = value;
+    return ret;
 }
 
 template<typename T>

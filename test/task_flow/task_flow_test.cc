@@ -29,56 +29,18 @@ struct AddData : PUBLIC TaskMessage
     int32_t count_;
 };  
 
-struct SourceNode : PUBLIC TaskNode
-{
-    SourceNode() 
-        : TaskNode( "source" )
-    {}
-
-PRIVATE:
-
-    virtual int32_t start_source() override final
+void source_tigger( TaskNodeSPtr node )
+{ 
+    static int32_t out_put_cnt = 0;
+    std::thread( [node]()
     {
-        static int32_t out_put_cnt = 0;
-        timer_.start( 0, 1000, [&]()
-        { 
-            feed( std::make_shared<SourceData>(name(), ++out_put_cnt) ); 
-        } );
-        return TARO_OK;
-    }
-
-    virtual int32_t finish() override final
-    {
-        timer_.stop();
-        return TARO_OK;
-    }
-
-    rt::CoTimer timer_;
-};
-
-struct AsyncSourceNode : PUBLIC TaskNode, std::enable_shared_from_this<AsyncSourceNode>
-{
-    AsyncSourceNode() 
-        : TaskNode( "async_source" )
-    {}
-
-PRIVATE:
-
-    virtual int32_t start_source() override final
-    {
-        static int32_t out_put_cnt = 0;
-        auto thiz = this->shared_from_this();
-        std::thread( [thiz]()
+        while(1)
         {
-            while(1)
-            {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-                thiz->feed( std::make_shared<SourceData>( thiz->name(), ++out_put_cnt) ); 
-            }
-        } ).detach();
-        return TARO_OK;
-    }
-};
+            std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+            node->feed( std::make_shared<SourceData>( node->name(), ++out_put_cnt) ); 
+        }
+    } ).detach();
+}
 
 struct AddNode : PUBLIC TaskNode
 {
@@ -146,18 +108,22 @@ PRIVATE:
 
 void task_flow_test()
 {
+    auto source_node = std::make_shared<TaskNode>( "source" );
+
     TaskScheduler sched;
-    sched.add_node( std::make_shared<AsyncSourceNode>() );
+    sched.add_node( source_node );
     sched.add_node( std::make_shared<AddNode>( "add1" ) );
     sched.add_node( std::make_shared<AddNode>( "add2" ) );
     sched.add_node( std::make_shared<MergeNode>( "merge" ) );
 
-    sched.add_edge( "async_source", "add1" );
-    sched.add_edge( "async_source", "add2" );
+    sched.add_edge( source_node->name(), "add1" );
+    sched.add_edge( source_node->name(), "add2" );
     sched.add_edge( "add1", "merge" );
     sched.add_edge( "add2", "merge" );
 
     sched.start( 2 );
+
+    source_tigger( source_node );
     Thread::sleep( 3000 );
     sched.stop();
 

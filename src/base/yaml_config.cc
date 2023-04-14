@@ -10,6 +10,8 @@ static const char* saving_flag = "#tarw";
 static const char* ready_flag  = "#taro";
 static uint32_t flag_len = 5;
 
+extern Optional<int32_t> get_index( std::string const& index );
+
 static bool save_file( const char* path, YAML::Node const& node )
 {
     std::ofstream fs( path );
@@ -70,6 +72,36 @@ static bool load_file( const char* path, YAML::Node& node )
         return false;
     }
     return true;
+}
+
+static YAML::Node to_yaml_path( std::string path, YAML::Node n, bool& end )
+{
+    std::string item;
+    auto pos = path.find( "." );
+    if ( pos != std::string::npos )
+    {
+        item = path.substr( 0, pos );
+        path = path.substr( pos + 1 );
+    }
+    else
+    {
+        end = true;
+        item = path;
+    }
+
+    auto index = get_index( item );
+    if ( index.valid() ) 
+    {
+        if ( !end )
+            return to_yaml_path( path, n[index.value()], end );
+        else
+            return n[index.value()];
+    }
+
+    if ( !end )
+        return to_yaml_path( path, n[item], end );
+    else
+        return n[item];
 }
 
 struct YamlConfig::Impl
@@ -139,9 +171,45 @@ bool YamlConfig::set_config( YAML::Node* config )
     return true;
 }
 
+bool YamlConfig::set_config( const char* path, YAML::Node* config )
+{
+    bool end = false;
+    auto ret = to_yaml_path( path, impl_->cfg_, end );
+    if ( ret.IsNull() )
+    {
+        return false;
+    }
+
+    ret = *config;
+    save_file( impl_->path_.c_str(), impl_->cfg_ );
+    if ( !impl_->path_bk_.empty() )
+    {
+        save_file( impl_->path_bk_.c_str(), impl_->cfg_ );
+    }
+    return true;
+}
+
 void YamlConfig::get_config( YAML::Node** config )
 {
     *config = &impl_->cfg_;
+}
+
+void YamlConfig::get_config( const char* path, YAML::Node** config )
+{
+    bool end = false;
+    auto ret = to_yaml_path( path, impl_->cfg_, end );
+    if ( ret )
+    {
+        *config = new YAML::Node( ret );
+    }
+}
+
+void YamlConfig::delete_node( YAML::Node* node )
+{
+    if( node != &impl_->cfg_ )
+    {
+        delete node;
+    }
 }
 
 NAMESPACE_TARO_END

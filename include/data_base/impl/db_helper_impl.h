@@ -2,9 +2,22 @@
 #pragma once
 
 #include "data_base/db_helper.h"
+#include "base/memory/optional.h"
 #include <set>
+#include <map>
 
 NAMESPACE_TARO_DB_BEGIN
+
+struct DBUri::Impl
+{
+    Optional<uint16_t> port_;
+    std::map<EDBUriType, std::string> uri_;
+};
+
+struct DBFormat::Impl
+{
+    std::string sql_;
+};
 
 struct DBContraintImpl
 {

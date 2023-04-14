@@ -44,17 +44,6 @@ struct TaskScheduler::Impl
     Impl() : running_( false ) {}
 
     /**
-    * @brief 启动源对象
-    */
-    void start_source( TaskNodeSPtr const& node )
-    {   
-        push_co( rt::CoRoutine::create( node->name(), [node]()
-        {
-            node->start_source();
-        }, false ) );
-    }
-
-    /**
     * @brief 运行下一步的节点
     * 
     * @param[in] node 当前节点
@@ -82,7 +71,7 @@ struct TaskScheduler::Impl
     */
     void push_co( rt::CoRoutineSPtr const& co )
     {
-        constexpr int32_t MAX_TASK_NUM = 65535;
+        constexpr int32_t MAX_TASK_NUM = std::numeric_limits<int32_t>::max();
         size_t index = ( size_t )MAX_TASK_NUM;
         int32_t min_playloads = MAX_TASK_NUM;
         for ( size_t i = 0; i < tasks_.size(); ++i )

@@ -10,6 +10,168 @@
 
 NAMESPACE_TARO_DB_BEGIN
 
+// URI类型
+enum EDBUriType
+{
+    eDBUriHost,
+    eDBUriUser,
+    eDBUriPwd,
+    eDBUriDB,
+    eDBUriFile,
+    eDBUriPort,
+};
+
+template<typename ValueType, EDBUriType Type>
+struct DBUriOpt
+{
+PUBLIC: // 公共函数
+
+    /**
+    * @brief 构造函数
+    */
+    DBUriOpt( ValueType const& value )
+        : value_( value )
+        , type_( Type )
+    {}
+
+    /**
+    * @brief 获取值
+    */
+    ValueType const& value() const
+    {
+        return value_;
+    }
+
+PRIVATE: // 私有变量
+
+    ValueType  value_;
+    EDBUriType type_;
+};
+
+using DBUriOptHost = DBUriOpt<std::string, eDBUriHost>;
+using DBUriOptUser = DBUriOpt<std::string, eDBUriUser>;
+using DBUriOptPwd  = DBUriOpt<std::string, eDBUriPwd>;
+using DBUriOptDB   = DBUriOpt<std::string, eDBUriDB>;
+using DBUriOptFile = DBUriOpt<std::string, eDBUriFile>;
+using DBUriOptPort = DBUriOpt<uint16_t, eDBUriPort>;
+
+#define db_opt_host db::DBUriOptHost
+#define db_opt_port db::DBUriOptPort
+#define db_opt_user db::DBUriOptUser
+#define db_opt_pwd  db::DBUriOptPwd
+#define db_opt_db   db::DBUriOptDB
+#define db_opt_file db::DBUriOptFile
+
+// 数据库URI
+class TARO_DLL_EXPORT DBUri
+{
+PUBLIC: // 公共函数
+
+    /**
+    * @brief 构造函数
+    */
+    DBUri();
+
+    /**
+    * @brief 构造函数
+    */
+    DBUri( const char* value, EDBUriType const& type = eDBUriFile );
+
+    /**
+    * @brief 析构函数
+    */
+    ~DBUri();
+
+    /**
+    * @brief 设置host
+    */
+    DBUri& operator<<( DBUriOptHost const& arg );
+
+    /**
+    * @brief 设置user
+    */
+    DBUri& operator<<( DBUriOptUser const& arg );
+
+    /**
+    * @brief 设置pwd
+    */
+    DBUri& operator<<( DBUriOptPwd const& arg );
+
+    /**
+    * @brief 设置database
+    */
+    DBUri& operator<<( DBUriOptDB const& arg );
+
+    /**
+    * @brief 设置file
+    */
+    DBUri& operator<<( DBUriOptFile const& arg );
+
+    /**
+    * @brief 设置端口
+    */
+    DBUri& operator<<( DBUriOptPort const& arg );
+
+    /**
+    * @brief 获取参数引用
+    */
+    std::string operator[]( EDBUriType const& type ) const;
+    
+    /**
+    * @brief 获取端口引用
+    */
+    Optional<uint16_t>& port() const;
+
+PRIVATE: // 私有函数
+
+    TARO_NO_COPY( DBUri );
+
+PRIVATE: // 私有变量
+
+    struct Impl;
+    Impl* impl_;
+};
+
+// 数据库格式变换
+struct TARO_DLL_EXPORT DBFormat
+{
+PUBLIC: // 公共函数
+
+    /**
+    * @brief 构造函数
+    */
+    DBFormat( const char* sql );
+
+    /**
+    * @brief 替换?
+    */
+    template<typename T>
+    DBFormat& operator<<( T value )
+    {
+        replace( value_to_str( value ) );
+        return *this;
+    }
+
+    /**
+    * @brief 获取SQL语句
+    */
+    operator std::string() const;
+
+PRIVATE: // 私有函数    
+
+    TARO_NO_COPY( DBFormat );
+
+    /**
+    * @brief 替换?
+    */
+    void replace( std::string const& value );
+
+PRIVATE: // 私有变量
+
+    struct Impl;
+    Impl* impl_;
+};
+
 // 数据库的约束条件类型
 enum EDBConstraint
 {

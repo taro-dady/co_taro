@@ -3,6 +3,96 @@
 
 NAMESPACE_TARO_DB_BEGIN
 
+DBUri::DBUri()
+    : impl_( new Impl )
+{
+
+}
+
+DBUri::DBUri( const char* value, EDBUriType const& type )
+    : impl_( new Impl )
+{
+    TARO_ASSERT( STRING_CHECK( value ), "value invalid" );
+    impl_->uri_[type] = value;
+}
+
+DBUri::~DBUri()
+{
+    delete impl_;
+    impl_ = nullptr;
+}
+
+DBFormat::DBFormat( const char* sql )
+    : impl_( new Impl )
+{
+    TARO_ASSERT( STRING_CHECK( sql ) );
+    impl_->sql_ = sql;
+}
+
+DBFormat::operator std::string() const
+{
+    return impl_->sql_;
+}
+
+void DBFormat::replace( std::string const& value )
+{
+    auto pos = impl_->sql_.find( "?" );
+    if ( pos != std::string::npos )
+    {
+        impl_->sql_.replace( pos, 1, value );
+    }
+}
+
+Optional<uint16_t>& DBUri::port() const
+{
+    return impl_->port_;
+}
+
+std::string DBUri::operator[]( EDBUriType const& type ) const
+{
+    auto it = impl_->uri_.find( type );
+    if( it == impl_->uri_.end() )
+    {
+        return "";
+    }
+    return impl_->uri_[type];
+}
+
+DBUri& DBUri::operator<<( DBUriOptHost const& arg )
+{
+    impl_->uri_[eDBUriHost] = arg.value();
+    return *this;
+}
+
+DBUri& DBUri::operator<<( DBUriOptUser const& arg )
+{
+    impl_->uri_[eDBUriUser] = arg.value();
+    return *this;
+}
+
+DBUri& DBUri::operator<<( DBUriOptPwd const& arg )
+{
+    impl_->uri_[eDBUriPwd] = arg.value();
+    return *this;
+}
+
+DBUri& DBUri::operator<<( DBUriOptDB const& arg )
+{
+    impl_->uri_[eDBUriDB] = arg.value();
+    return *this;
+}
+
+DBUri& DBUri::operator<<( DBUriOptFile const& arg )
+{
+    impl_->uri_[eDBUriFile] = arg.value();
+    return *this;
+}
+
+DBUri& DBUri::operator<<( DBUriOptPort const& arg )
+{
+    impl_->port_ = arg.value();
+    return *this;
+}
 
 DBContraint::DBContraint( const char* name )
     : impl_( new DBContraintImpl )

@@ -51,20 +51,6 @@ int32_t TaskScheduler::start( int32_t thrd_num )
             return TARO_ERR_FAILED;
         }
     }
-
-    auto entry = impl_->graphy_.entry();
-    if ( entry.empty() )
-    {
-        impl_->tasks_.clear();
-        impl_->running_ = false;
-        TASKFLOW_ERROR << "no entry";
-        return TARO_ERR_FAILED;
-    }
-
-    for ( auto& one : entry )
-    {
-        impl_->start_source( std::dynamic_pointer_cast<TaskNode>( one ) );
-    }
     return TARO_OK;
 }
 
@@ -106,6 +92,17 @@ int32_t TaskScheduler::remove_node( const char* name )
     return impl_->graphy_.remove_node( name );
 }
 
+int32_t TaskScheduler::find_node( const char* name, TaskNodeSPtr& node )
+{
+    GraphyNodeSPtr graph_node;
+    auto ret = impl_->graphy_.find_node( name, graph_node );
+    if ( TARO_OK == ret && graph_node != nullptr )
+    {
+        node = std::dynamic_pointer_cast<TaskNode>( graph_node );
+    }
+    return ret;
+}
+
 int32_t TaskScheduler::add_edge( const char* src, const char* dst )
 {
     return impl_->graphy_.add_edge( src, dst );
@@ -114,6 +111,11 @@ int32_t TaskScheduler::add_edge( const char* src, const char* dst )
 int32_t TaskScheduler::remove_edge( const char* src, const char* dst )
 {
     return impl_->graphy_.remove_edge( src, dst );
+}
+
+bool TaskScheduler::has_circle( std::string& node )
+{
+    return impl_->graphy_.has_circle( node );
 }
 
 NAMESPACE_TARO_TASKFLOW_END

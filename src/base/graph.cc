@@ -94,6 +94,22 @@ int32_t Graph::remove_node( const char* name )
     return impl_->nodes_.erase( name ) > 0 ? TARO_OK : TARO_ERR_FAILED;
 }
 
+int32_t Graph::find_node( const char* name, GraphyNodeSPtr& node )
+{
+    if ( !STRING_CHECK( name ) )
+    {
+        return TARO_ERR_INVALID_ARG;
+    }
+
+    auto it = impl_->nodes_.find( name );
+    if ( it == std::end( impl_->nodes_ ) )
+    {
+        return TARO_ERR_FAILED;
+    }
+    node = it->second;
+    return TARO_OK;              
+}
+
 int32_t Graph::add_edge( const char* src, const char* dst )
 {
     if ( !STRING_CHECK( src, dst ) )
@@ -199,7 +215,7 @@ std::vector<GraphyNodeSPtr> Graph::all_nodes() const
     return nodes;
 }
 
-bool Graph::has_circle() const
+bool Graph::has_circle( std::string& node ) const
 {
     if ( impl_->nodes_.empty() )
     {
@@ -224,6 +240,7 @@ bool Graph::has_circle() const
         circle_check( one, visited, error_node );
         if ( !error_node.empty() )
         {
+            node = error_node;
             return true;
         }
         else

@@ -1,119 +1,273 @@
 ﻿
-#include "base/serialize/str_serialize.h"
-#include "data_base/db_reflector.h"
-#include "data_base/data_base.h"
+#include "data_base/inc.h"
 
 USING_NAMESPACE_TARO
 
-namespace aa{
+namespace company{
     struct Employee
     {
         // 申明映射关系
-        TARO_DB_DEFINE( Employee, age, name );
+        TARO_DB_DEFINE( Employee, identity, age, name, salary, sex, floor );
 
-        Employee() = default;
-        Employee( int a, const char* n )
-            : age( a )
-            , name( n )
-        {}
-
-        int age = 0;
+        uint32_t identity;
+        int32_t age;
         std::string name;
+        double salary;
+        bool sex;
+        int64_t floor;
     };
 }
 
-void db_test()
+inline std::ostream& operator<<(std::ostream& os, company::Employee const& one)
 {
-    aa::Employee::db_cls_reflect();
-
-    aa::Employee temp;
-    temp.age = 200;
-    temp.name = "hello";
-
-    auto reflector = db::DBReflector::instance().get_member_reflectors( &typeid( aa::Employee ) );
-    for( auto& one : reflector )
-    {
-        printf( "%s %s\n", one->get_name().c_str(), one->serialize( ( void* )&temp ).c_str() );
-    }
-
-    reflector[0]->deserialize( "100", ( void* )&temp );
-    reflector[1]->deserialize( "world", ( void* )&temp );
-    printf( "%d %s\n", temp.age, temp.name.c_str() );
+    os << "id:" << one.identity 
+       << " name:" << one.name 
+       << " age:" << one.age 
+       << " salary:" << one.salary 
+       << " floor:" << one.floor 
+       << " sex:" << ( one.sex ? "male" : "female" )
+       << std::endl;
+    return os;
 }
 
-void db_test1()
+void init_employee( std::vector<company::Employee>& employee )
+{
+    {
+        company::Employee one;
+        one.name = "Jack";
+        one.age = 20;
+        one.salary = 3000.033;
+        one.sex = true;
+        one.floor = 22;
+        employee.push_back(one);
+    }
+
+    {
+        company::Employee one;
+        one.name = "Henry";
+        one.age = 35;
+        one.salary = 25000.89;
+        one.sex = true;
+        one.floor = 23;
+        employee.push_back(one);
+    }
+
+    {
+        company::Employee one;
+        one.name = "Mayer";
+        one.age = 28;
+        one.salary = 8500;
+        one.sex = false;
+        one.floor = 22;
+        employee.push_back(one);
+    }
+
+    {
+        company::Employee one;
+        one.name = "Angelia";
+        one.age = 38;
+        one.salary = 58123.86;
+        one.sex = false;
+        one.floor = 22;
+        employee.push_back(one);
+    }
+}
+
+db::DataBaseSPtr db_mysql_create()
+{
+    /* 
+    mysql -u root -p
+    select user from mysql.user;
+    create user runoon@localhost identified by 'runoon12345';
+    GRANT ALL PRIVILEGES ON *.* TO runoon@localhost;
+    FLUSH PRIVILEGES;
+    create database test;
+    */
+
+    // 加载动态库，减少MySQL的依赖，使用时安装即可
+    TARO_ASSERT( TARO_OK == db::load_mysql_library( "/usr/lib/x86_64-linux-gnu/libmysqlclient.so" ) );
+    
+    // 创建数据库对象
+    auto db = db::create_database( DB_TYPE_MYSQL );
+
+    db::DBUri uri;
+    uri << db_opt_host( "127.0.0.1" ) 
+        << db_opt_port( 3306 ) 
+        << db_opt_user( "runoon" ) 
+        << db_opt_pwd( "runoon12345" )
+        << db_opt_db( "test" );
+    
+    auto ret = db->connect( uri );
+    TARO_ASSERT( ret == TARO_OK );
+    return db;
+}
+
+db::DataBaseSPtr db_sqlite_create()
 {
     // 创建数据库对象
-    auto db = db::create_database();
+    auto db = db::create_database( DB_TYPE_SQLITE );
 
     // 连接数据库(SQLITE打开文件)
-    auto ret = db->connect( "sqlite_test.db" );
+    TARO_ASSERT( db->connect( db::DBUri( "sqlite_test.db" ) ) == TARO_OK );
+    return db;
+}
+
+void db_mysql_test_by_sql()
+{
+    auto db = db_mysql_create();
+
+    std::string sql = 
+       "create table if not exists Employee(identity int primary key auto_increment,age int,name text,salary double,sex boolean);";
+    auto ret = db->excute_cmd( sql.c_str() );
     TARO_ASSERT( ret == TARO_OK );
 
+    sql = db::DBFormat( "insert into Employee (age,identity,name,salary,sex) values (?,null,?,?,?);" ) << 50 << "Jack" << 3000.03 << 1;
+    ret = db->excute_cmd( sql.c_str() );
+    TARO_ASSERT( ret == TARO_OK );
+
+    auto query_res = db->query( "select * from Employee;" );
+    TARO_ASSERT( query_res != nullptr );
+
+    auto cols = query_res->get_columns();
+    TARO_ASSERT( cols.size() == 5 );
+    do{
+        for(size_t i = 0; i < cols.size(); ++i)
+            std::cout << cols[i] <<":"<< query_res->get_col_val(i) << ",";
+        std::cout << std::endl;
+    }while ( query_res->next() );
+
+    printf("update --------------\n");
+
+    sql = db::DBFormat( "update Employee set age=? where name = ?;" ) << 20 << "Jack";
+    ret = db->excute_cmd( sql.c_str() );
+    TARO_ASSERT( ret == TARO_OK );
+
+    query_res = db->query( "select * from Employee;" );
+    TARO_ASSERT( query_res != nullptr );
+    cols = query_res->get_columns();
+    TARO_ASSERT( cols.size() == 5 );
+    do{
+        for(size_t i = 0; i < cols.size(); ++i)
+            std::cout << cols[i] <<":"<< query_res->get_col_val(i) << ",";
+        std::cout << std::endl;
+    }while ( query_res->next() );
+
+    printf("remove --------------\n");
+    ret = db->excute_cmd( "delete from Employee;" );
+    TARO_ASSERT( ret == TARO_OK );
+
+    printf("drop --------------\n");
+    ret = db->excute_cmd( "drop table Employee;" );
+    TARO_ASSERT( ret == TARO_OK );
+}
+
+void db_test( db::DataBaseSPtr db )
+{
     // 删除表
-    db->drop_table<aa::Employee>();
+    db->drop_table<company::Employee>();
 
     // 建表，参数为约束条件
-    ret = db->create_table<aa::Employee>( DB_CSTR( aa::Employee::name ).primary_key().not_null(), db::create_if_not_exist() );
+    auto ret = db->create_table<company::Employee>( DB_CSTR( company::Employee::identity ).primary_key().auto_inc(), db::create_if_not_exist() );
     TARO_ASSERT( ret == TARO_OK );
 
     // 插入数据
-    ret = db->insert( aa::Employee( 20, "jack" ) );
-    TARO_ASSERT( ret == TARO_OK );
-    ret = db->insert( aa::Employee( 9,  "jack1" ) );
-    TARO_ASSERT( ret == TARO_OK );
-    ret = db->insert( aa::Employee( 23, "jack2" ) );
-    TARO_ASSERT( ret == TARO_OK );
-    ret = db->insert( aa::Employee( 17, "jack3" ) );
-    TARO_ASSERT( ret == TARO_OK );
+    std::vector<company::Employee> employee;
+    init_employee( employee );
+
+    uint64_t index = 1;
+    for( auto const& one : employee )
+    {
+        auto ret = db->insert_ret_id( one, DB_NULL( company::Employee::identity ) ); // identity auto inc
+        TARO_ASSERT( ret.valid() && index == ret.value() );
+        ++index;
+    }
 
     {
         // 查询全部数据
-        auto result = db->query<aa::Employee>();
+        auto result = db->query<company::Employee>();
         TARO_ASSERT( 4 == result.size() );
-        for( auto& one : result )
+
+        std::cout << "----query test-----" << std::endl;
+        for( auto const& one : result )
         {
-            std::cout << one.name << " " << one.age << std::endl;
+            std::cout << one;
         }
     }
 
     {
         // 条件查询
-        auto result = db->query<aa::Employee>(
-            DB_BLACK << DB_MEM( aa::Employee::name ), // 不查询name
-            DB_COND( aa::Employee::age ) > 10 && DB_COND( aa::Employee::age ) <= 20 && DB_COND( aa::Employee::name ).is_null( false ), // 查询条件
+        auto result = db->query<company::Employee>(
+            //DB_BLACK << DB_MEM( company::Employee::name ), // 不查询name
+            DB_COND( company::Employee::age ) > 20 && DB_COND( company::Employee::age ) <= 35 && DB_COND( company::Employee::name ).is_null( false ), // 查询条件
             DB_LIMIT( 3, 0 ),  // 查询范围 3行数据，起始位置为0
-            DB_DESCEND( aa::Employee::age ) ); // 升序还是降序DB_ASCEND
-        std::cout << "query 2 --------------" << std::endl;
+            DB_DESCEND( company::Employee::age ) ); // 升序还是降序DB_ASCEND
+        std::cout << "----condition query test-----" << std::endl;
         TARO_ASSERT( 2 == result.size() );
         for( auto& one : result )
         {
-            std::cout << one.name << " " << one.age << std::endl;
+            std::cout << one;
         }
     }
 
-    // jack3 年龄修改为30，DB_WHITE 表示只更新age 如果有其他选项可以继续以 << DB_MEM() 的方式添加 
-    ret = db->update( aa::Employee( 30, "" ), DB_WHITE << DB_MEM( aa::Employee::age ), DB_COND( aa::Employee::name ) = "jack3" );
+    {
+        std::cout << "----caculate test-----" << std::endl;
+
+        // 计算各项值
+        auto avg = db->average<company::Employee>( DB_MEM( company::Employee::salary ) );
+        TARO_ASSERT( avg.valid() );
+        std::cout << "avg:" << avg.value() << std::endl;
+
+        auto sum = db->sum<company::Employee>( DB_MEM( company::Employee::salary ) );
+        TARO_ASSERT( sum.valid() );
+        std::cout << "sum:" << sum.value() << std::endl;
+
+        auto cnt = db->count<company::Employee>();
+        TARO_ASSERT( cnt.valid() );
+        std::cout << "cnt:" << cnt.value() << std::endl;
+    }
+
+    {
+        std::cout << "----condition caculate test-----" << std::endl;
+
+        // 计算各项值
+        auto avg = db->average<company::Employee>( DB_MEM( company::Employee::salary ), DB_COND( company::Employee::age ) > 25 );
+        TARO_ASSERT( avg.valid() );
+        std::cout << "avg:" << avg.value() << std::endl;
+
+        auto sum = db->sum<company::Employee>( DB_MEM( company::Employee::salary ), DB_COND( company::Employee::age ) > 25 );
+        TARO_ASSERT( sum.valid() );
+        std::cout << "sum:" << sum.value() << std::endl;
+
+        auto cnt = db->count<company::Employee>( DB_COND( company::Employee::salary ) > 10000  && DB_COND( company::Employee::age ) > 25 );
+        TARO_ASSERT( cnt.valid() );
+        std::cout << "cnt:" << cnt.value() << std::endl;
+    }
+
+    // Mayer 年龄修改为30，DB_WHITE 表示只更新age 如果有其他选项可以继续以 << DB_MEM() 的方式添加 
+    company::Employee mayer;
+    mayer.age = 30;
+    mayer.name = "Mayer";
+    ret = db->update( mayer, DB_WHITE << DB_MEM( company::Employee::age ), DB_COND( company::Employee::name ) = mayer.name );
     TARO_ASSERT( ret == TARO_OK );
     {
-        auto result = db->query<aa::Employee>( DB_COND( aa::Employee::name ) = "jack3" );
+        std::cout << "----update test-----" << std::endl;
+        auto result = db->query<company::Employee>( DB_COND( company::Employee::name ) = mayer.name );
         TARO_ASSERT( 1 == result.size() );
         for( auto& one : result )
         {
-            std::cout << one.name << " " << one.age << std::endl;
+            std::cout << one;
         }
     }
 
-    ret = db->remove<aa::Employee>( DB_COND( aa::Employee::name ) = "jack2");
+    ret = db->remove<company::Employee>( DB_COND( company::Employee::name ) = "Jack");
     TARO_ASSERT( ret == TARO_OK );
     {
-        std::cout << "after remove --------------" << std::endl;
-        // 查询全部数据
-        auto result = db->query<aa::Employee>();
+        std::cout << "----remove test-----" << std::endl;
+        auto result = db->query<company::Employee>();
         TARO_ASSERT( 3 == result.size() );
         for( auto& one : result )
         {
-            std::cout << one.name << " " << one.age << std::endl;
+            std::cout << one;
         }
     }
 }
@@ -126,10 +280,17 @@ int main( int argc, char** argv )
         exit( 0 );
     }
 
+    log::set_sys_level( log::eLogLevelDebug );
     switch ( atoi( argv[1] ) )
     {
     case 0:
-        db_test1();
+        db_test( db_sqlite_create() );
+        break;
+    case 1:
+        db_mysql_test_by_sql();
+        break;
+    case 2:
+        db_test( db_mysql_create() );
         break;
     }
     return 0;

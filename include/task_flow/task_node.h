@@ -25,6 +25,13 @@ PUBLIC: // 公共函数
     */
     virtual ~TaskNode();
 
+    /**
+    * @brief 投递数据
+    * 
+    * @param[in] msg 投递的消息，由数据源调用
+    */
+    void feed( TaskMessageSPtr const& msg );
+
 PROTECTED: // 保护函数
 
     /**
@@ -36,11 +43,6 @@ PROTECTED: // 保护函数
     virtual TaskMessageSPtr on_message( TaskMessageSPtr const& msg );
 
     /**
-    * @brief 数据源开始运行
-    */
-    virtual int32_t start_source();
-
-    /**
     * @brief 初始化
     */
     virtual int32_t init();
@@ -49,11 +51,6 @@ PROTECTED: // 保护函数
     * @brief 节点退出
     */
     virtual int32_t finish();
-
-    /**
-    * @brief 投递数据
-    */
-    void feed( TaskMessageSPtr const& msg );
 
 PRIVATE: // 私有类型
 

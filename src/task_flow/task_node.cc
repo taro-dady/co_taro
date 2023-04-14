@@ -15,11 +15,6 @@ TaskNode::~TaskNode()
     delete impl_;
 }
 
-int32_t TaskNode::start_source()
-{
-    return TARO_OK;
-}
-
 int32_t TaskNode::init()
 {
     return TARO_OK;

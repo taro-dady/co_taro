@@ -54,6 +54,14 @@ PUBLIC: // 公共函数
     int32_t remove_node( const char* name );
 
     /**
+    * @brief 查询节点
+    * 
+    * @param[in]  name 节点名称
+    * @param[out] node 查询到的节点
+    */
+    int32_t find_node( const char* name, TaskNodeSPtr& node );
+
+    /**
     * @brief 连接节点
     * 
     * @param[in] 源节点
@@ -68,6 +76,13 @@ PUBLIC: // 公共函数
     * @param[in] 目的节点
     */
     int32_t remove_edge( const char* src, const char* dst );
+
+    /**
+    * @brief 判断是否成环
+    * 
+    * @param[out] node 成环的节点
+    */
+    bool has_circle( std::string& node );
 
 PRIVATE: // 私有函数
 

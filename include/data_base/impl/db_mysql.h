@@ -1,26 +1,31 @@
-﻿
+
 #pragma once
 
-#include "sqlite/sqlite3.h"
+#include "mysql/mysql.h"
 #include "data_base/impl/db_sql.h"
 
 NAMESPACE_TARO_DB_BEGIN
 
-class SQLiteDBResult : PUBLIC DBQueryResult
+class MySQLDBResult : PUBLIC DBQueryResult
 {
 PUBLIC: // 公共函数
 
     /**
     * @brief 构造函数
     * 
-    * @param[in] stmt 查询结果对象
+    * @param[in] result 查询结果对象
     */
-    SQLiteDBResult( sqlite3_stmt* stmt );
+    MySQLDBResult( MYSQL_RES* result );
 
     /**
     * @brief 析构函数
     */
-    ~SQLiteDBResult();
+    ~MySQLDBResult();
+
+    /**
+    * @brief 是否有效
+    */
+    bool valid() const;
 
 PRIVATE: // 私有函数
 
@@ -45,22 +50,24 @@ PRIVATE: // 私有函数
 
 PRIVATE: // 私有变量
 
-    sqlite3_stmt* stmt_;
+    MYSQL_RES* result_;
+    MYSQL_ROW  row_;
+    int32_t    max_col_;
 };
 
-class SQLiteDB : PUBLIC DataBaseSQL
+class MySQLDB : PUBLIC DataBaseSQL
 {
 PUBLIC: // 公共函数
 
     /**
     * @brief 构造函数
     */
-    SQLiteDB();
+    MySQLDB();
 
     /**
     * @brief 析构函数
     */
-    ~SQLiteDB();
+    ~MySQLDB();
 
     /**
     * @brief  连接数据库
@@ -107,15 +114,16 @@ PUBLIC: // 公共函数
     virtual int32_t rollback_transaction() override;
 
 PRIVATE: // 私有函数
-
+    
     /**
      * @brief 初始化SQL相关参数
     */
     void init_sql_param();
 
 PRIVATE: // 私有变量
-
-    sqlite3* handler_;
+    
+    MYSQL handler_;
+    bool  connect_;
 };
 
 NAMESPACE_TARO_DB_END
