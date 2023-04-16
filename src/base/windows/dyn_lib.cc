@@ -54,6 +54,7 @@ int32_t DynLib::load( const char* path )
     impl_->handler_ = LoadLibrary( path );;
     if( impl_->handler_ == nullptr )
     {
+        printf( "error %d\n", GetLastError() );
         return TARO_ERR_FAILED;
     }
     return TARO_OK;

@@ -1,4 +1,4 @@
-
+﻿
 #pragma once
 
 #include "base/memory/graph.h"
@@ -54,7 +54,7 @@ PROTECTED: // 保护函数
 
 PRIVATE: // 私有类型
 
-    friend struct TaskScheduler;
+    friend class TaskScheduler;
 
 PRIVATE: // 私有函数
 

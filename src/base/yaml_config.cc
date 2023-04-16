@@ -74,8 +74,14 @@ static bool load_file( const char* path, YAML::Node& node )
     return true;
 }
 
-static YAML::Node to_yaml_path( std::string path, YAML::Node n, bool& end )
+static YAML::Node to_yaml_path( std::string path, YAML::Node n, bool& end, bool& error )
 {
+    if ( n.IsNull() || error )
+    {
+        error = true;
+        return YAML::Node();
+    }
+
     std::string item;
     auto pos = path.find( "." );
     if ( pos != std::string::npos )
@@ -93,13 +99,13 @@ static YAML::Node to_yaml_path( std::string path, YAML::Node n, bool& end )
     if ( index.valid() ) 
     {
         if ( !end )
-            return to_yaml_path( path, n[index.value()], end );
+            return to_yaml_path( path, n[index.value()], end, error );
         else
             return n[index.value()];
     }
 
     if ( !end )
-        return to_yaml_path( path, n[item], end );
+        return to_yaml_path( path, n[item], end, error );
     else
         return n[item];
 }
@@ -173,9 +179,9 @@ bool YamlConfig::set_config( YAML::Node* config )
 
 bool YamlConfig::set_config( const char* path, YAML::Node* config )
 {
-    bool end = false;
-    auto ret = to_yaml_path( path, impl_->cfg_, end );
-    if ( ret.IsNull() )
+    bool end = false, error = false;
+    auto ret = to_yaml_path( path, impl_->cfg_, end, error );
+    if ( ret.IsNull() || error )
     {
         return false;
     }
@@ -196,9 +202,9 @@ void YamlConfig::get_config( YAML::Node** config )
 
 void YamlConfig::get_config( const char* path, YAML::Node** config )
 {
-    bool end = false;
-    auto ret = to_yaml_path( path, impl_->cfg_, end );
-    if ( ret )
+    bool end = false, error = false;
+    auto ret = to_yaml_path( path, impl_->cfg_, end, error );
+    if ( ret && !error )
     {
         *config = new YAML::Node( ret );
     }

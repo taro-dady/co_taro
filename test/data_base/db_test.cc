@@ -86,6 +86,7 @@ db::DataBaseSPtr db_mysql_create()
 
     // 加载动态库，减少MySQL的依赖，使用时安装即可
     TARO_ASSERT( TARO_OK == db::load_mysql_library( "/usr/lib/x86_64-linux-gnu/libmysqlclient.so" ) );
+    //TARO_ASSERT( TARO_OK == db::load_mysql_library( "D:\\WorkSpace\\mysql-connector-c-6.1.11-winx64\\lib\\debug\\libmysql.dll" ) );
     
     // 创建数据库对象
     auto db = db::create_database( DB_TYPE_MYSQL );
@@ -132,7 +133,7 @@ void db_mysql_test_by_sql()
     TARO_ASSERT( cols.size() == 5 );
     do{
         for(size_t i = 0; i < cols.size(); ++i)
-            std::cout << cols[i] <<":"<< query_res->get_col_val(i) << ",";
+            std::cout << cols[i] << ":" << query_res->get_col_val( ( int )i ) << ",";
         std::cout << std::endl;
     }while ( query_res->next() );
 
@@ -148,7 +149,7 @@ void db_mysql_test_by_sql()
     TARO_ASSERT( cols.size() == 5 );
     do{
         for(size_t i = 0; i < cols.size(); ++i)
-            std::cout << cols[i] <<":"<< query_res->get_col_val(i) << ",";
+            std::cout << cols[i] <<":"<< query_res->get_col_val( ( int )i) << ",";
         std::cout << std::endl;
     }while ( query_res->next() );
 

@@ -1,4 +1,4 @@
-
+﻿
 #pragma once
 
 #include "mysql/mysql.h"
@@ -121,9 +121,9 @@ PRIVATE: // 私有函数
     void init_sql_param();
 
 PRIVATE: // 私有变量
-    
-    MYSQL handler_;
+
     bool  connect_;
+    MYSQL handler_;
 };
 
 NAMESPACE_TARO_DB_END
