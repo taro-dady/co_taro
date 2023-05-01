@@ -84,15 +84,19 @@ db::DataBaseSPtr db_mysql_create()
     create database test;
     */
 
+#if defined(_WIN32) || defined(_WIN64)
+    // dll https://downloads.mysql.com/archives/c-c/  Windows(x86, 64-bit), ZIP Archive
+    TARO_ASSERT( TARO_OK == db::load_mysql_library( "D:\\WorkSpace\\mysql-connector-c-6.1.11-winx64\\lib\\libmysql.dll" ) );
+#else
     // 加载动态库，减少MySQL的依赖，使用时安装即可
     TARO_ASSERT( TARO_OK == db::load_mysql_library( "/usr/lib/x86_64-linux-gnu/libmysqlclient.so" ) );
-    //TARO_ASSERT( TARO_OK == db::load_mysql_library( "D:\\WorkSpace\\mysql-connector-c-6.1.11-winx64\\lib\\debug\\libmysql.dll" ) );
-    
+#endif
+
     // 创建数据库对象
     auto db = db::create_database( DB_TYPE_MYSQL );
 
     db::DBUri uri;
-    uri << db_opt_host( "127.0.0.1" ) 
+    uri << db_opt_host( "192.168.65.3" )   // mysql server host address
         << db_opt_port( 3306 ) 
         << db_opt_user( "runoon" ) 
         << db_opt_pwd( "runoon12345" )

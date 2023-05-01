@@ -18,6 +18,9 @@ struct TaskMessageImpl
 
 struct TaskNodeImpl
 {
+    TaskNodeImpl() : running_( false ){}
+
+    std::atomic_bool running_;
     std::function< void( TaskNode*, TaskMessageSPtr const& ) > feed_func_;
 };
 
@@ -56,12 +59,19 @@ struct TaskScheduler::Impl
             auto handler = [this, one, msg]()
             {
                 auto task_node = std::dynamic_pointer_cast<TaskNode>( one );
+                task_node->impl_->running_ = true;
                 auto out_msg = task_node->on_message( msg );
+                task_node->impl_->running_ = false;
                 if ( out_msg != nullptr )
                 {
                     this->next( task_node.get(), out_msg );
                 }
             };
+
+            if ( !running_ )
+            {
+                return;
+            }
             push_co( rt::CoRoutine::create( one->name(), handler, false ) );
         }
     }

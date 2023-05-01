@@ -1,4 +1,5 @@
 ﻿
+#include "base/system/thread.h"
 #include "task_flow/impl/task_flow_impl.h"
 
 NAMESPACE_TARO_TASKFLOW_BEGIN
@@ -67,9 +68,15 @@ int32_t TaskScheduler::stop()
     auto nodes = impl_->graphy_.all_nodes();
     for( auto& one : nodes )
     {
-        if ( TARO_OK != std::dynamic_pointer_cast<TaskNode>( one )->finish() )
+        auto task_node = std::dynamic_pointer_cast<TaskNode>( one );
+        while( task_node->impl_->running_ )
         {
-            TASKFLOW_ERROR << "task:" << one->name() << "finish failed";
+            Thread::sleep( 100 );
+        }
+        
+        if ( TARO_OK != task_node->finish() )
+        {
+            TASKFLOW_ERROR << "task:" << one->name() << " finish failed";
             return TARO_ERR_FAILED;
         }
     }

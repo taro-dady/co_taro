@@ -26,9 +26,12 @@ assert_fail( const char* str, const char* file, size_t line, Args&&... )
 
 NAMESPACE_TARO_END
 
-#if defined( _WIN32 ) || defined( _WIN64 )
-#define TARO_ASSERT( x, ... ) if (!(x)) { taro::assert_fail( #x, __FILE__, __LINE__, ##__VA_ARGS__ ); }
+#ifdef NDEBUG
+    #define TARO_ASSERT 
 #else
-#define TARO_ASSERT( x, ... ) if (!(x)) { taro::assert_fail( #x, __FILE__, __LINE__, #__VA_ARGS__ ); }
+    #if defined( _WIN32 ) || defined( _WIN64 )
+        #define TARO_ASSERT( x, ... ) if (!(x)) { taro::assert_fail( #x, __FILE__, __LINE__, ##__VA_ARGS__ ); }
+    #else
+        #define TARO_ASSERT( x, ... ) if (!(x)) { taro::assert_fail( #x, __FILE__, __LINE__, #__VA_ARGS__ ); }
+    #endif
 #endif
-
