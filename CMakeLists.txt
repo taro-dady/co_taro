@@ -1,52 +1,19 @@
-
 cmake_minimum_required(VERSION 3.0.0)
 project(test VERSION 0.1.0)
 
 PROJECT(taro)
 
-# include directories
 INCLUDE_DIRECTORIES(
-	${PROJECT_SOURCE_DIR}/include
-	${PROJECT_SOURCE_DIR}/3th
-	${PROJECT_SOURCE_DIR}/3th/yaml-cpp/include
+	${PROJECT_SOURCE_DIR}/interface
+	${PROJECT_SOURCE_DIR}/project
 )
 
-IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
-	ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
-ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
-	ADD_DEFINITIONS(-Wall)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall")
+add_definitions(-Wall)
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 LINK_DIRECTORIES(${PROJECT_BINARY_DIR}/lib)
 
-# compile yaml-cpp
-IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
-	SET(YAML_BUILD_SHARED_LIBS "on")
-	SET(YAML_CPP_BUILD_TESTS "off")
-	SET(YAML_CPP_BUILD_TOOLS "off")
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
-ADD_SUBDIRECTORY(3th/yaml-cpp)
-
-# compile sqlite
-ADD_SUBDIRECTORY(3th/sqlite)
-
-# compile all code
-ADD_SUBDIRECTORY(build_all)
-
-# test
-ADD_SUBDIRECTORY(test/sync_variable)
-ADD_SUBDIRECTORY(test/json_config)
-ADD_SUBDIRECTORY(test/yaml_config)
-ADD_SUBDIRECTORY(test/co_routine)
-ADD_SUBDIRECTORY(test/net_tcp)
-ADD_SUBDIRECTORY(test/net_tcp_ssl)
-ADD_SUBDIRECTORY(test/net_udp)
-ADD_SUBDIRECTORY(test/data_base)
-ADD_SUBDIRECTORY(test/task_flow)
-
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	ADD_SUBDIRECTORY(test/net_unix_domain)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+# sample
+ADD_SUBDIRECTORY(test/base)
