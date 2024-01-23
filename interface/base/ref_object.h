@@ -8,16 +8,28 @@ NAMESPACE_TARO_BEGIN
 
 struct RefObject {
 PUBLIC:
+    /**
+     * @brief constructor
+    */
     RefObject() 
         : ref_( 1 ) {
     }
 
+    /**
+     * @brief destructor
+    */
     virtual ~RefObject() = default;
-    
+
+    /**
+     * @brief add reference
+    */
     void increment_ref() {
         ++ref_;
     }
 
+    /**
+     * @brief minus reference
+    */
     void decrement_ref() {
         if ( --ref_ == 0 ) {
             delete this;
@@ -26,8 +38,6 @@ PUBLIC:
 
 PRIVATE:
     TARO_NO_COPY( RefObject );
-
-PRIVATE:
     std::atomic_int32_t ref_;
 };
 

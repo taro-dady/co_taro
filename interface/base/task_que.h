@@ -30,18 +30,23 @@ struct DoubleListHead {
 template<typename Mutex, bool ThreadSafe = true>
 class DoubleList {
 PUBLIC:
-
+    /**
+     * @brief constructor
+    */
     DoubleList() 
         : count_( 0 ) {
         head_ = new DoubleListHead();
         tail_ = head_;
     }
 
+    /**
+     * @brief destructor
+    */
     ~DoubleList() {
-        DoubleListHead* item = tail_->prev;
+        DoubleListHead* item = tail_;
         while( item != head_ ) {
             item->prev->next = item->next;
-            if ( item->next != nullptr )
+            if ( item->next )
                 item->next->prev = item->prev;
             decrement_ref( item );
             item = item->prev;
@@ -51,6 +56,9 @@ PUBLIC:
         count_ = 0;
     }
 
+    /**
+     * @brief push new node
+    */
     void push( DoubleListHead* node ) {
         LockGuard g( mutex_ );
         tail_->next = node;
@@ -60,6 +68,9 @@ PUBLIC:
         ++count_;
     }
 
+    /**
+     * @brief pop front node
+    */
     bool pop( DoubleListHead** node ) {
         LockGuard g( mutex_ );
         if ( tail_ == head_ ) {
@@ -72,37 +83,57 @@ PUBLIC:
             item->next->prev = item->prev;
         *node = item;
         decrement_ref( item );
+
         --count_;
         return true;
     }
 
+    /**
+     * @brief check if list empty
+    */
     bool empty() const {
         LockGuard g( mutex_ );
         return count_ == 0;
     }
 
+    /**
+     * @brief get list size
+    */
     uint32_t size() const {
         LockGuard g( mutex_ );
         return count_;
     }
 
-    void move_list( DoubleListHead** head, DoubleListHead** tail ) {
+    /**
+     * @brief remove list
+    */
+    void remove_all( DoubleListHead**head, DoubleListHead** tail, uint32_t& count ) {
         LockGuard g( mutex_ );
-        ( *head )->next = head_->next;
-        head_->next->prev = *head;
+        *head = head_->next;
         *tail = tail_;
+        count = count_;
+
         head_->next = 0;
+        head_->prev = 0;
         tail_ = head_;
         count_ = 0;
     }
 
+    /**
+     * @brief append list
+    */
+    void append( DoubleListHead* head, DoubleListHead* tail, uint32_t count ) {
+        LockGuard g( mutex_ );
+        tail_->next = head;
+        head->prev = tail_;
+        tail_ = tail;
+        count_ += count;
+    }
+    
 PRIVATE:
     using LockGuard = typename std::conditional<ThreadSafe, std::lock_guard<Mutex>,  LockFreeGuard<Mutex> >::type;
-
-PRIVATE:
     TARO_NO_COPY( DoubleList );
 
-PRIVATE:
     uint32_t count_;
     mutable Mutex mutex_;
     DoubleListHead* head_;

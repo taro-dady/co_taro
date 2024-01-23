@@ -28,6 +28,28 @@ void dl_test() {
     }
 }
 
+void dl_move() {
+    DoubleList<std::mutex> dl;
+    uint32_t count = 20;
+    while( count > 0 ) {
+        dl.push( new DlTest( count ) );
+        --count;
+    }
+    uint32_t size = 0;
+    DoubleListHead *head, *tail;
+    dl.remove_all( &head, &tail, size );
+    
+    DoubleList<std::mutex> dl1;
+    dl1.append( head, tail, size );
+    while( !dl1.empty() ) {
+        DlTest* tmp;
+        dl1.pop( ( DoubleListHead** )&tmp );
+        decrement_ref(tmp);
+        printf("tmp %d\n", tmp->index);
+    }
+    printf( "dl size %d\n", dl.size() );
+}
+
 void list_test() {
     std::list<uint32_t> ll;
     uint32_t count = TEST_NUMBER;
@@ -42,7 +64,7 @@ void list_test() {
     }
 }
 
-int main() {
+void compare_test() {
     uint32_t total = 20, bigger = 0, less = 0;
     int64_t avg = 0;
     while( total-- > 0 ) {
@@ -68,5 +90,9 @@ int main() {
         }
     }
     printf( "bigger %d, less %d avg %lf\n", bigger, less, (double)avg / ( less ) );
+}
+
+int main() {
+    dl_move();
     return 0;
 }
